@@ -15,6 +15,8 @@
 name: osrs
 
 x-app-common: &app-common
+  # The repo is cloned to /srv/osrs/app, and this file sits beside it at
+  # /srv/osrs/docker-compose.yml — so the build context is ./app.
   build:
     context: ./app
     dockerfile: Dockerfile

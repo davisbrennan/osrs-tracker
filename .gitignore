@@ -7,3 +7,7 @@ build/
 .DS_Store
 *.log
 next-env.d.ts
+
+# Server-side state, in case the repo is ever cloned to /srv directly.
+backups/
+releases/

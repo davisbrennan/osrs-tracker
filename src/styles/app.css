@@ -415,3 +415,368 @@ h1 .members {
   color: var(--faint);
   cursor: default;
 }
+
+/* ============================================================
+   Accounts
+   ============================================================ */
+
+.acct-list {
+  display: grid;
+  gap: var(--s-3);
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  margin-bottom: var(--s-5);
+}
+
+.acct {
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  padding: var(--s-4);
+}
+
+.acct-head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
+}
+.acct-head h2 {
+  font-size: 16px;
+  margin: 0;
+}
+.acct-type {
+  color: var(--dim);
+  font-size: 12px;
+}
+.acct-primary {
+  background: var(--gold-wash);
+  border-radius: 999px;
+  color: var(--gold);
+  font-size: 11px;
+  padding: 2px 8px;
+}
+.acct-warn {
+  color: var(--loss);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0 0 var(--s-3);
+}
+
+.acct-stats {
+  display: grid;
+  gap: var(--s-3);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 0 var(--s-3);
+}
+.acct-stats.wide {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-bottom: var(--s-5);
+  padding: var(--s-4);
+}
+.acct-stats dt {
+  color: var(--dim);
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+.acct-stats dd {
+  margin: 0;
+}
+.acct-stats dd .num {
+  font-size: 16px;
+}
+
+.acct-foot {
+  align-items: center;
+  border-top: 1px solid var(--rule-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  justify-content: space-between;
+  padding-top: var(--s-3);
+}
+
+.acct-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+}
+.acct-actions button {
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+.acct-actions button:hover:not(:disabled) {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
+.acct-actions button.danger {
+  border-color: var(--loss);
+  color: var(--loss);
+}
+.acct-actions button.danger:hover {
+  background: var(--loss-wash);
+  border-color: var(--loss);
+  color: var(--loss);
+}
+
+/* ============================================================
+   Skill grid
+   Dense on purpose — twenty-three skills should be one glance,
+   not a scroll. The bar is progress through the CURRENT level,
+   which is the number people actually watch.
+   ============================================================ */
+
+.skill-grid {
+  display: grid;
+  gap: var(--s-2);
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+
+.skill {
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  padding: var(--s-3);
+}
+.skill.maxed {
+  border-color: var(--gold-dim);
+}
+
+.skill-head {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.skill-name {
+  font-size: 13px;
+}
+.skill-level {
+  font-size: 15px;
+  font-weight: 600;
+}
+.skill.maxed .skill-level {
+  color: var(--gold);
+}
+
+.skill-bar {
+  background: var(--bg);
+  border-radius: 2px;
+  height: 3px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+.skill-bar span {
+  background: var(--gold);
+  display: block;
+  height: 100%;
+}
+.skill.maxed .skill-bar span {
+  background: var(--gp-large);
+}
+
+.skill-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  justify-content: space-between;
+}
+.skill-eta {
+  margin: 6px 0 0;
+}
+
+.chart-dot {
+  fill: var(--gold);
+}
+
+.plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.plain-list li {
+  border-bottom: 1px solid var(--rule-soft);
+  font-size: 13px;
+  padding: var(--s-2) 0;
+}
+.plain-list li:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 760px) {
+  .acct-stats.wide {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ============================================================
+   Flip journal
+   ============================================================ */
+
+.flip-form {
+  display: grid;
+  gap: var(--s-3);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+}
+.flip-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  position: relative;
+}
+.flip-field.wide {
+  grid-column: span 2;
+}
+.flip-field label {
+  color: var(--dim);
+  font-size: 12px;
+}
+.flip-field input {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 9px;
+  width: 100%;
+}
+.flip-field button {
+  background: var(--gold);
+  border: 0;
+  border-radius: var(--r-sm);
+  color: #1c1409;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+}
+.flip-field button:disabled {
+  background: var(--panel-2);
+  color: var(--faint);
+  cursor: default;
+}
+.flip-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+/* The item picker. Absolute so it overlays rather than reflowing the
+   form every time a result set changes size. */
+.picker {
+  background: var(--panel-2);
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-md);
+  left: 0;
+  list-style: none;
+  margin: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 0;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 5;
+}
+.picker button {
+  background: none;
+  border: 0;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 13px;
+  gap: var(--s-3);
+  justify-content: space-between;
+  padding: 7px 10px;
+  text-align: left;
+  width: 100%;
+}
+.picker button:hover {
+  background: var(--gold-wash);
+  color: var(--gold);
+}
+
+.close-input {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 7px;
+  width: 9ch;
+}
+
+/* ============================================================
+   Goals
+   ============================================================ */
+
+.goal-list {
+  list-style: none;
+  margin: 0 0 var(--s-4);
+  padding: 0;
+}
+.goal-list li {
+  align-items: center;
+  border-bottom: 1px solid var(--rule-soft);
+  display: flex;
+  gap: var(--s-3);
+  justify-content: space-between;
+  padding: var(--s-2) 0;
+}
+.goal-list li:last-child {
+  border-bottom: 0;
+}
+.goal-list li.done .goal-main strong {
+  color: var(--profit);
+}
+.goal-main {
+  font-size: 13px;
+  min-width: 0;
+}
+.goal-list button {
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  color: var(--dim);
+  cursor: pointer;
+  flex: none;
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 9px;
+}
+.goal-list button:hover {
+  border-color: var(--loss);
+  color: var(--loss);
+}
+
+.row-form select {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 9px;
+}
+
+@media (max-width: 760px) {
+  .flip-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -5,7 +5,7 @@ import { signIn } from '@/lib/auth-client';
 import { signupAllowed } from '@/app/actions/signup-gate';
 
 export default function SignInForm({
-  callbackURL = '/dashboard',
+  callbackURL = '/accounts',
   prefill = '',
 }: {
   callbackURL?: string;

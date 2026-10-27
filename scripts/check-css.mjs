@@ -33,7 +33,6 @@ const defined = new Set([...css.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]
 // Ternaries and template literals produce fragments that aren't class names.
 const noise = /^[^a-zA-Z]|[^\w-]|^(?:on|done|over|ghost|booked|self|settings|center)$/;
 
-
 /*
  * Second check: the same class defined in two stylesheets.
  *
@@ -52,7 +51,9 @@ function crossFileCollisions() {
     const body = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     // Top-level rules only; a nested or compound selector is a deliberate
     // override rather than an accidental redefinition.
-    const declared = new Set([...body.matchAll(/^\s*\.([a-zA-Z][\w-]*)[^{,]*\{/gm)].map((m) => m[1]));
+    const declared = new Set(
+      [...body.matchAll(/^\s*\.([a-zA-Z][\w-]*)[^{,]*\{/gm)].map((m) => m[1])
+    );
     for (const c of declared) {
       if (!owners.has(c)) owners.set(c, []);
       owners.get(c).push(f);
@@ -63,7 +64,9 @@ function crossFileCollisions() {
 
 const collisions = crossFileCollisions();
 if (collisions.length > 0) {
-  console.error(`check:css — ${collisions.length} class(es) defined in more than one stylesheet:\n`);
+  console.error(
+    `check:css — ${collisions.length} class(es) defined in more than one stylesheet:\n`
+  );
   for (const [c, fs] of collisions) {
     console.error(`  .${c}`);
     console.error(`      ${fs.join('  and  ')}`);

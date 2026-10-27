@@ -25,6 +25,18 @@ const ICONS: Record<string, React.ReactElement> = {
       <path d="m10.5 10.5 3.5 3.5" />
     </svg>
   ),
+  accounts: (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <circle cx="8" cy="5.25" r="2.75" />
+      <path d="M2.5 14c0-2.9 2.4-4.75 5.5-4.75S13.5 11.1 13.5 14" />
+    </svg>
+  ),
+  journal: (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <path d="M3 2.5h8.5a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3z" />
+      <path d="M3 2.5v12M5.5 6h4M5.5 9h4" />
+    </svg>
+  ),
   settings: (
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
       <circle cx="8" cy="8" r="2.4" />
@@ -89,7 +101,7 @@ export default async function AppShell({
       </header>
 
       <nav className="tabs">
-        {NAV.map((t) => (
+        {NAV.filter((t) => t.public || signedIn).map((t) => (
           <Link key={t.key} href={t.href} aria-current={current === t.key ? 'page' : undefined}>
             {ICONS[t.key]}
             {t.label}

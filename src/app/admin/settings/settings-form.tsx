@@ -43,15 +43,15 @@ export default function SettingsForm({ settings }: { settings: AppSettings }) {
         <span>
           <strong>Maintenance mode</strong>
           <em>
-            Shows a short notice instead of the planner. Guest RSVP pages and published wedding
-            sites keep working — guests shouldn&rsquo;t be blocked by your deploy.
+            Shows a short notice instead of the site. The price poller keeps running, so nothing
+            falls behind while it&rsquo;s on.
           </em>
         </span>
       </label>
 
       {maintenance && (
         <p className="adm-warn">
-          While this is on, couples can&rsquo;t reach their planner. Remember to turn it off.
+          While this is on, nobody can reach the site. Remember to turn it off.
         </p>
       )}
 

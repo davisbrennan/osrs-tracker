@@ -24,7 +24,7 @@ export default function AdminShell({
               </Link>
             ))}
           </nav>
-          <Link href="/dashboard" className="admin-exit">
+          <Link href="/flips" className="admin-exit">
             Back to the app
           </Link>
         </div>

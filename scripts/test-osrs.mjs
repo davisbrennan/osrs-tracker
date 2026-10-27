@@ -225,7 +225,10 @@ section('Hiscores parsing');
 function buildCsv(levels, { skipSailing = false, activities = 5 } = {}) {
   const list = skipSailing ? SKILLS.filter((s) => s.key !== 'sailing') : SKILLS;
   const real = list.filter((s) => s.key !== 'overall');
-  const total = real.reduce((sum, s) => sum + (levels[s.key] ?? (s.key === 'hitpoints' ? 10 : 1)), 0);
+  const total = real.reduce(
+    (sum, s) => sum + (levels[s.key] ?? (s.key === 'hitpoints' ? 10 : 1)),
+    0
+  );
   const totalXp = real.reduce((sum, s) => sum + xpForLevel(levels[s.key] ?? 1), 0);
   const rows = [`100000,${total},${totalXp}`];
   for (const s of real) {
@@ -237,9 +240,21 @@ function buildCsv(levels, { skipSailing = false, activities = 5 } = {}) {
 }
 
 const account = {
-  magic: 57, ranged: 45, hitpoints: 39, defence: 38, attack: 31, strength: 31,
-  firemaking: 29, woodcutting: 28, mining: 26, fletching: 23, prayer: 15,
-  cooking: 15, fishing: 14, crafting: 9, smithing: 8,
+  magic: 57,
+  ranged: 45,
+  hitpoints: 39,
+  defence: 38,
+  attack: 31,
+  strength: 31,
+  firemaking: 29,
+  woodcutting: 28,
+  mining: 26,
+  fletching: 23,
+  prayer: 15,
+  cooking: 15,
+  fishing: 14,
+  crafting: 9,
+  smithing: 8,
 };
 const parsed = parseHiscores(buildCsv(account));
 eq('Magic', parsed.skills.magic.level, 57);
@@ -250,7 +265,11 @@ eq('Prayer', parsed.skills.prayer.level, 15);
 eq('an untrained skill is level 1', parsed.skills.herblore.level, 1);
 eq('unranked has no rank', parsed.skills.herblore.rank, null);
 eq('xp matches the curve', parsed.skills.magic.xp, xpForLevel(57));
-assert('a clean parse warns about nothing', parsed.warnings.length === 0, parsed.warnings.join(' | '));
+assert(
+  'a clean parse warns about nothing',
+  parsed.warnings.length === 0,
+  parsed.warnings.join(' | ')
+);
 
 // The safety net. If our skill list ever drifts out of step with the live API,
 // every stat would be attributed to the wrong skill and still look plausible —
@@ -269,7 +288,11 @@ assert('a missing trailing skill is flagged', withoutSailing.warnings.length > 0
 eq('earlier skills still parse correctly', withoutSailing.skills.magic.level, 57);
 
 // Hitpoints never reads below 10, because no account can be below it.
-eq('unranked Hitpoints floors to 10', parseHiscores(buildCsv({})).skills.hitpoints.level, HITPOINTS_MINIMUM);
+eq(
+  'unranked Hitpoints floors to 10',
+  parseHiscores(buildCsv({})).skills.hitpoints.level,
+  HITPOINTS_MINIMUM
+);
 eq('a fresh account is combat 3', combatLevel(parseHiscores(buildCsv({})).skills), 3);
 const maxed = Object.fromEntries(SKILLS.filter((s) => s.key !== 'overall').map((s) => [s.key, 99]));
 eq('a maxed account is combat 126', combatLevel(parseHiscores(buildCsv(maxed)).skills), 126);

@@ -1,39 +1,47 @@
 import type { Metadata } from 'next';
+import { SITE } from '@/lib/site';
 import SignInForm from './form';
 
 export const metadata: Metadata = {
   title: 'Sign in',
-  description: 'Sign in to your wedding planning workspace.',
+  description: `Sign in to ${SITE.name} to track your accounts, log flips and set price alerts.`,
   robots: { index: false, follow: false },
 };
 
-/** Only allow same-site relative paths as a redirect target. */
+/** Where a sign-in lands when nothing else was asked for. */
+const DEFAULT_TARGET = '/accounts';
+
+/**
+ * Only same-site relative paths are allowed as a redirect target.
+ *
+ * `next` arrives from the query string, so without this an attacker could
+ * send someone a sign-in link that bounces them to another domain carrying
+ * the trust of having just logged in here.
+ */
 function safeNext(next?: string): string {
-  if (!next) return '/dashboard';
-  if (!next.startsWith('/') || next.startsWith('//')) return '/dashboard';
+  if (!next) return DEFAULT_TARGET;
+  if (!next.startsWith('/') || next.startsWith('//')) return DEFAULT_TARGET;
   return next;
 }
 
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; b?: string; g?: string; d?: string }>;
+  searchParams: Promise<{ next?: string }>;
 }) {
-  const { next, b, g, d } = await searchParams;
-
-  // Numbers carried over from the public budget calculator: keep them through
-  // the email round trip so onboarding can prefill.
-  const carry = new URLSearchParams();
-  if (b && /^\d{1,9}$/.test(b)) carry.set('b', b);
-  if (g && /^\d{1,4}$/.test(g)) carry.set('g', g);
-  if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) carry.set('d', d);
-  const target = next ?? (carry.toString() ? `/onboarding?${carry}` : '/dashboard');
+  const { next } = await searchParams;
 
   return (
     <main className="plain-page">
-      <h1>Sign in</h1>
-      <p>Enter your email and we’ll send you a link. No password to remember, nothing to reset.</p>
-      <SignInForm callbackURL={safeNext(target)} />
+      <h1>Sign in to {SITE.name}</h1>
+      <p>
+        Enter your email and we&rsquo;ll send you a link. No password to remember, nothing to reset.
+      </p>
+      <SignInForm callbackURL={safeNext(next)} />
+      <p className="muted">
+        The flip finder and item pages work without an account. You need one to track a RuneScape
+        name, save a cash stack, log flips or set price alerts.
+      </p>
     </main>
   );
 }

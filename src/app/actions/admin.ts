@@ -31,6 +31,6 @@ export async function saveAppSettings(formData: FormData) {
   `);
 
   revalidatePath('/admin/settings');
-  revalidatePath('/dashboard');
+  revalidatePath('/flips');
   return { ok: 'Saved.' as const };
 }

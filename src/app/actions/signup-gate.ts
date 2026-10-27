@@ -8,7 +8,7 @@ import { appSettings } from '@/lib/app-settings';
  * Checked before a magic link is sent.
  *
  * Closing sign-ups must not lock out people who already have an account — they
- * have a wedding in here. So this only refuses email addresses we've never
+ * have an account here. So this only refuses email addresses we've never
  * seen.
  */
 export async function signupAllowed(

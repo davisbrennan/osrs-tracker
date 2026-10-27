@@ -38,7 +38,7 @@ export default async function AdminSettings() {
           ))}
         </ul>
         <p className="adm-muted">
-          To change this, edit <code>/srv/wedding/.env</code> and redeploy.
+          To change this, edit <code>/srv/osrs/.env</code> and redeploy.
         </p>
       </section>
     </AdminShell>

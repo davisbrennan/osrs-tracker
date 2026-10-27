@@ -51,3 +51,23 @@ export function ago(minutes: number | null): string {
   if (hours < 24) return `${Math.round(hours)}h`;
   return `${Math.round(hours / 24)}d`;
 }
+
+/**
+ * A projection's duration, in the units a person thinks in.
+ *
+ * Hours up to two days, then days, then weeks, then months — because "1,847
+ * hours to 99" is technically precise and completely unusable, while "about
+ * 10 weeks" is the thing you actually wanted to know.
+ */
+export function formatEta(hours: number | null): string | null {
+  if (hours === null || !Number.isFinite(hours) || hours <= 0) return null;
+  if (hours < 1) return `${Math.round(hours * 60)} min`;
+  if (hours < 48) return `${Math.round(hours)}h`;
+  const days = hours / 24;
+  if (days < 14) return `${Math.round(days)} days`;
+  const weeks = days / 7;
+  if (weeks < 10) return `${Math.round(weeks)} weeks`;
+  const months = days / 30.44;
+  if (months < 24) return `${Math.round(months)} months`;
+  return `${(months / 12).toFixed(1)} years`;
+}
