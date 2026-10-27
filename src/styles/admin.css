@@ -1,0 +1,295 @@
+/*
+ * Admin panel.
+ *
+ * Deliberately plainer than both the planner and the marketing site — this is
+ * an operations screen for one person, read far more often than it's used, so
+ * density and legibility beat personality.
+ */
+
+.admin {
+  min-height: 100dvh;
+  background: var(--surface-2);
+  color: var(--ink-900);
+}
+
+.admin-bar {
+  background: var(--ink-900);
+  color: #fff;
+}
+.admin-bar-inner {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--s-3) var(--s-5);
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+}
+.admin-mark {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+}
+.admin-bar nav {
+  display: flex;
+  gap: var(--s-4);
+  flex: 1;
+}
+.admin-bar nav a {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  text-decoration: none;
+  padding: 2px 0;
+  border-bottom: 2px solid transparent;
+}
+.admin-bar nav a:hover {
+  color: #fff;
+}
+.admin-bar nav a[aria-current='page'] {
+  color: #fff;
+  border-bottom-color: #fff;
+}
+.admin-exit {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.admin-exit:hover {
+  color: #fff;
+}
+
+.admin-main {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--s-5);
+}
+.admin-main h1 {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--s-2);
+}
+
+.adm-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--s-3);
+  margin: var(--s-4) 0 var(--s-5);
+}
+.adm-stat {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+}
+.adm-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-500);
+  margin-bottom: 6px;
+}
+.adm-stat strong {
+  display: block;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.adm-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-500);
+  margin-top: 5px;
+}
+
+.adm-card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  padding: var(--s-5);
+  margin-bottom: var(--s-4);
+}
+.adm-card h2 {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 400;
+  margin-bottom: var(--s-3);
+}
+
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.adm-table th,
+.adm-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+}
+.adm-table tbody tr:last-child th,
+.adm-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.adm-table thead th {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-500);
+  border-bottom: 1px solid var(--rule);
+}
+.adm-table th[scope='row'] {
+  font-weight: 500;
+}
+.adm-table.wide {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.adm-muted {
+  color: var(--ink-500);
+  font-size: 12px;
+}
+.adm-empty {
+  color: var(--ink-500);
+  padding: var(--s-5);
+  text-align: center;
+  border: 1px dashed var(--rule);
+  border-radius: var(--r-md);
+}
+.adm-flag {
+  display: inline-block;
+  margin-left: 7px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--c-budget);
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  border-radius: 99px;
+  padding: 1px 7px;
+}
+
+.adm-meter {
+  height: 8px;
+  background: var(--surface-2);
+  border-radius: 99px;
+  overflow: hidden;
+  margin: var(--s-3) 0 var(--s-2);
+}
+.adm-meter span {
+  display: block;
+  height: 100%;
+  background: var(--positive);
+}
+.adm-meter span.hot {
+  background: var(--alert);
+}
+
+.adm-note {
+  font-size: 12px;
+  color: var(--ink-500);
+  max-width: 58ch;
+  border-left: 2px solid var(--rule);
+  padding-left: var(--s-3);
+}
+
+.adm-check {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+  margin: 0 0 var(--s-4);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--ink-900);
+}
+.adm-check input {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  flex: none;
+}
+.adm-check strong {
+  display: block;
+  font-weight: 600;
+}
+.adm-check em {
+  display: block;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--ink-500);
+  margin-top: 3px;
+  max-width: 62ch;
+}
+
+.adm-field {
+  margin-bottom: var(--s-4);
+}
+.adm-field label {
+  display: block;
+  margin-bottom: 5px;
+}
+.adm-field input,
+.adm-field select {
+  width: 100%;
+  max-width: 34rem;
+}
+
+.adm-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule-soft);
+}
+.adm-actions button {
+  margin: 0;
+}
+.adm-ok {
+  color: var(--positive);
+  font-size: 13px;
+}
+.adm-warn {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  font-size: 13px;
+  margin: 0 0 var(--s-4);
+}
+
+.adm-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--s-3);
+  font-size: 13px;
+}
+.adm-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.adm-list li:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .admin-bar-inner {
+    flex-wrap: wrap;
+    gap: var(--s-3);
+  }
+  .admin-main {
+    padding: var(--s-4);
+  }
+}

@@ -1,0 +1,369 @@
+/* Base elements: forms, lists, cards, modals. Used everywhere. */
+
+/* ============================================================
+   Cards & sections
+   ============================================================ */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  padding: var(--s-5);
+  margin-bottom: var(--s-4);
+}
+.card > h2 {
+  color: var(--ink-500);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  margin-bottom: var(--s-4);
+}
+
+.muted {
+  color: var(--ink-500);
+  font-size: 13px;
+}
+.error {
+  color: var(--alert);
+  font-size: 13px;
+}
+.ok {
+  color: var(--positive);
+  font-size: 13px;
+}
+.over {
+  color: var(--alert);
+}
+
+/* ============================================================
+   Lists
+   ============================================================ */
+
+ul.plain {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+ul.plain > li {
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--rule-soft);
+  font-size: 14px;
+}
+ul.plain > li:last-child {
+  border-bottom: 0;
+}
+
+.taskrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-4);
+}
+.taskrow .meta {
+  font-size: 12px;
+  white-space: nowrap;
+  flex: none;
+  color: var(--ink-500);
+}
+
+.checkline {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  cursor: pointer;
+  margin: 0;
+  font-weight: 400;
+}
+.checkline input {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.struck {
+  color: var(--ink-300);
+  text-decoration: line-through;
+}
+
+.lineitem {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-2) var(--s-4);
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.amounts {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-3);
+  font-size: 13px;
+}
+.amounts label {
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ============================================================
+   Forms
+   ============================================================ */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  max-width: 24rem;
+}
+
+label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-700);
+  margin-top: var(--s-2);
+}
+.checkline,
+.amounts label {
+  font-size: inherit;
+}
+
+input,
+select {
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink-900);
+  width: 100%;
+}
+input[type='checkbox'] {
+  width: auto;
+}
+input:focus-visible,
+select:focus-visible {
+  border-color: var(--accent);
+  outline-offset: 0;
+}
+input::placeholder {
+  color: var(--ink-300);
+}
+
+input.mini {
+  width: 5.5rem;
+  padding: 5px 7px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+button {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: var(--s-3);
+  padding: 8px 16px;
+  border: 1px solid var(--ink-900);
+  border-radius: var(--r-sm);
+  background: var(--ink-900);
+  color: #fff;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.15s ease;
+}
+button:hover:not(:disabled) {
+  background: var(--ink-700);
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button.link {
+  background: none;
+  border: 0;
+  color: var(--ink-500);
+  font-size: 12px;
+  padding: 0;
+  margin: 0;
+  text-decoration: underline;
+  align-self: auto;
+}
+button.link:hover {
+  color: var(--alert);
+  background: none;
+}
+
+.notice {
+  background: var(--accent-weak);
+  border: 1px solid #cfe0ff;
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+  margin-bottom: var(--s-4);
+  font-size: 14px;
+}
+.notice strong {
+  display: block;
+  margin-bottom: var(--s-1);
+}
+
+/* ============================================================
+   Modal
+   ============================================================ */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--s-5) var(--s-4);
+  overflow-y: auto;
+}
+.modal {
+  background: var(--surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+  width: 100%;
+  max-width: 46rem;
+  margin: auto;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--rule);
+}
+.modal-head h1 {
+  font-size: 22px;
+}
+
+.iconbtn {
+  background: none;
+  border: 0;
+  margin: 0;
+  padding: 0 4px;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink-500);
+  cursor: pointer;
+}
+.iconbtn:hover {
+  color: var(--ink-900);
+  background: none;
+}
+
+.modal-body {
+  padding: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.field label {
+  margin: 0;
+}
+.field .muted {
+  font-size: 11px;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-4);
+}
+
+textarea {
+  font: inherit;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink-900);
+  width: 100%;
+  resize: vertical;
+}
+textarea:focus-visible {
+  border-color: var(--accent);
+  outline-offset: 0;
+}
+
+.modal-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--rule);
+  margin-top: var(--s-2);
+}
+.foot-spacer {
+  flex: 1;
+}
+button.danger {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--alert);
+  margin: 0;
+}
+button.danger:hover {
+  background: var(--alert-weak);
+  border-color: #fecdd3;
+}
+
+/* Guest rows are click targets now. */
+button.guestname {
+  background: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  min-width: 0;
+  flex: 1;
+}
+button.guestname:hover:not(:disabled) {
+  background: none;
+}
+button.guestname:hover:not(:disabled) strong {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+button.guestname:disabled {
+  cursor: default;
+  opacity: 1;
+}
+.placeholder {
+  color: var(--ink-300);
+  font-style: italic;
+  font-weight: 400;
+}
+
+@media (max-width: 640px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+  .modal-backdrop {
+    padding: 0;
+  }
+  .modal {
+    border-radius: 0;
+    min-height: 100dvh;
+  }
+}

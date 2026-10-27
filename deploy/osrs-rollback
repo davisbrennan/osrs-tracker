@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+#
+# Put the previous release back on the air.
+#
+# Install to /usr/local/bin/osrs-rollback.
+#
+# This rolls back the APPLICATION, not the database. That is why migrations
+# have to be backward-compatible: if the new release dropped a column the old
+# one reads, no amount of flipping containers will save it, and the restore
+# path is the pre-deploy dump in /srv/osrs/backups.
+#
+set -euo pipefail
+
+cd /srv/osrs
+set -a
+source .env
+set +a
+
+UPSTREAM_CONF=/etc/nginx/conf.d/osrs-upstream.conf
+
+PREVIOUS=$(cat releases/previous 2>/dev/null || echo none)
+if [ "$PREVIOUS" = "none" ] || [ -z "$PREVIOUS" ]; then
+  echo "!! no previous release recorded — nothing to roll back to"
+  exit 1
+fi
+
+if grep -q 3003 "$UPSTREAM_CONF"; then
+  LIVE=blue;  TARGET=green; TARGET_PORT=3004
+else
+  LIVE=green; TARGET=blue;  TARGET_PORT=3003
+fi
+
+echo "==> rolling back to $PREVIOUS on $TARGET (port $TARGET_PORT), $LIVE is live"
+
+if ! docker image inspect "osrs-app:$PREVIOUS" > /dev/null 2>&1; then
+  echo "!! image osrs-app:$PREVIOUS is gone — it was pruned."
+  echo "   Rebuild it: git -C app checkout $PREVIOUS && APP_TAG=$PREVIOUS docker compose build app_blue"
+  exit 1
+fi
+
+APP_TAG=$PREVIOUS docker compose --profile "$TARGET" up -d "app_$TARGET"
+
+for i in $(seq 1 30); do
+  if curl -fsS "http://127.0.0.1:${TARGET_PORT}/api/health" > /dev/null 2>&1; then
+    echo "==> $TARGET healthy after ${i}s"; break
+  fi
+  if [ "$i" = "30" ]; then
+    echo "!! $TARGET never became healthy — $LIVE is still serving. Not switching."
+    docker compose logs --tail=50 "app_$TARGET"
+    exit 1
+  fi
+  sleep 1
+done
+
+sudo tee "$UPSTREAM_CONF" > /dev/null <<CONF
+upstream osrs_app {
+    server 127.0.0.1:${TARGET_PORT};   # ${TARGET}
+    keepalive 32;
+}
+CONF
+sudo nginx -t && sudo systemctl reload nginx
+
+APP_TAG=$PREVIOUS docker compose up -d --no-deps worker
+sleep 10
+docker compose stop "app_$LIVE"
+
+# Swap the markers so a second rollback returns to where you started rather
+# than walking further back into history.
+CURRENT=$(cat releases/current 2>/dev/null || echo none)
+echo "$PREVIOUS" > releases/current
+echo "$CURRENT"  > releases/previous
+
+echo "==> rolled back to $PREVIOUS"

@@ -1,0 +1,43 @@
+{
+  "name": "osrs-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "worker": "tsx worker.ts",
+    "db:migrate": "node scripts/migrate.mjs",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
+    "check:css": "node scripts/check-css.mjs",
+    "check:layout": "node scripts/check-layout.mjs",
+    "check": "npm run check:css && npm run check:layout && npx tsc --noEmit",
+    "test:osrs": "tsx scripts/test-osrs.mjs",
+    "test:jobs": "tsx scripts/test-jobs.mts"
+  },
+  "dependencies": {
+    "better-auth": "^1.7.1",
+    "bullmq": "^5.63.0",
+    "drizzle-orm": "^0.45.2",
+    "ioredis": "^5.9.0",
+    "next": "^16.3.1",
+    "pg": "^8.16.3",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "resend": "^6.20.0",
+    "sharp": "^0.35.3",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "@types/pg": "^8.15.5",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "drizzle-kit": "^0.31.5",
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3"
+  }
+}

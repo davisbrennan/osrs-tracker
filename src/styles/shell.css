@@ -1,0 +1,258 @@
+/* The signed-in frame: masthead, tabs, content. */
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: var(--gold);
+  text-decoration-color: var(--gold-dim);
+  text-underline-offset: 2px;
+}
+a:hover {
+  color: var(--text);
+}
+
+:where(a, button, input, select, summary):focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+.page-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 var(--s-4);
+}
+
+/* Standalone message pages (maintenance). Deliberately NOT .plain-page:
+   that class belongs to auth.css, and defining it twice at the same
+   specificity meant whichever file loaded last silently won. */
+.notice-page {
+  max-width: 46ch;
+  margin: 18vh auto;
+  padding: 0 var(--s-4);
+}
+.notice-page p {
+  color: var(--dim);
+}
+
+.sitebanner {
+  margin: 0 calc(var(--s-4) * -1);
+  padding: var(--s-2) var(--s-4);
+  background: var(--gold-wash);
+  border-bottom: 1px solid var(--rule);
+  color: var(--text);
+  font-size: 13px;
+  text-align: center;
+}
+.sitebanner.warn {
+  background: var(--loss-wash);
+  border-bottom-color: var(--loss);
+}
+
+/* ============================================================
+   Masthead
+   The cash stack sits here because it reprices the whole tool —
+   it is the one piece of state every number on the page depends
+   on, so it belongs where it is always visible and always
+   editable, not buried in settings.
+   ============================================================ */
+
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  padding: var(--s-4) 0 var(--s-3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.brand {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  text-decoration: none;
+  flex: none;
+}
+.brand:hover {
+  color: var(--gold);
+}
+.brand span {
+  color: var(--gold);
+}
+
+/* Named .cash-stack, not .stack: base.css already defines a vertical
+   form stack under that name. Two rules at the same specificity meant
+   base.css's flex-direction: column survived and the masthead input
+   stacked vertically, with nothing failing anywhere. */
+.cash-stack {
+  display: flex;
+  flex-direction: row;
+  flex: none;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin-left: auto;
+}
+.cash-stack label {
+  font-size: 12px;
+  color: var(--dim);
+}
+.cash-stack input {
+  width: 9ch;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  padding: 5px 7px;
+  text-align: right;
+}
+.cash-stack button {
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+}
+.cash-stack button:hover {
+  border-color: var(--gold-dim);
+  color: var(--text);
+}
+
+.gear {
+  color: var(--dim);
+  display: inline-flex;
+  flex: none;
+}
+.gear svg {
+  width: 17px;
+  height: 17px;
+}
+.gear:hover,
+.gear.on {
+  color: var(--gold);
+}
+
+/* ============================================================
+   Tabs
+   ============================================================ */
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: var(--s-5);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tabs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: var(--s-3) var(--s-3);
+  color: var(--dim);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.tabs a svg {
+  width: 15px;
+  height: 15px;
+}
+.tabs a:hover {
+  color: var(--text);
+}
+.tabs a[aria-current='page'] {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
+.tabs-spacer {
+  flex: 1;
+}
+
+.signout {
+  background: none;
+  border: 0;
+  color: var(--faint);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: var(--s-3) var(--s-2);
+}
+.signout:hover {
+  color: var(--loss);
+}
+
+.content {
+  padding-bottom: var(--s-8);
+}
+
+/* ============================================================
+   Page headings
+   ============================================================ */
+
+h1 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--s-2);
+}
+h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 var(--s-3);
+}
+
+.lede {
+  color: var(--dim);
+  margin: 0 0 var(--s-5);
+  max-width: 68ch;
+}
+
+@media (max-width: 620px) {
+  .masthead {
+    flex-wrap: wrap;
+    gap: var(--s-3);
+  }
+  .cash-stack {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+  }
+  .cash-stack input {
+    flex: 1;
+  }
+}
+
+/* The outermost frame. Keeps the masthead, tabs and content in one
+   column with a consistent gutter at every width. */
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}

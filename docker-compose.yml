@@ -1,0 +1,97 @@
+# The OSRS tracker stack.
+#
+# Lives in the repo deliberately. The previous project kept this file only on
+# the server, which meant a change to the worker's entrypoint could break a
+# deploy with no way to see it coming from the code.
+#
+# Designed to run ALONGSIDE the old wedding stack rather than replacing it, so
+# nothing is torn down until this side is proven:
+#   - its own compose project name, so container names never collide
+#   - app on 3003/3004 (the wedding stack holds 3001/3002)
+#   - Postgres published on 5433 (the wedding one holds 5432)
+#
+# Once the old stack is gone, see the note on shared_buffers below.
+
+name: osrs
+
+x-app-common: &app-common
+  image: osrs-app:${APP_TAG:-latest}
+  restart: unless-stopped
+  env_file: .env
+  depends_on:
+    db:
+      condition: service_healthy
+    cache:
+      condition: service_started
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - '127.0.0.1:5433:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # shared_buffers is 1GB, not the usual 25% of RAM, because while the
+    # wedding stack is still up there are TWO Postgres instances on an 8GB
+    # box and 2GB each would invite the OOM killer mid-deploy. Raise it to
+    # 2GB once the old stack is deleted.
+    command: >
+      postgres
+        -c max_connections=100
+        -c shared_buffers=1GB
+        -c effective_cache_size=3GB
+        -c work_mem=16MB
+        -c maintenance_work_mem=256MB
+        -c random_page_cost=1.1
+        -c wal_compression=on
+        -c log_min_duration_statement=500
+
+  cache:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+
+  app_blue:
+    <<: *app-common
+    ports: ['127.0.0.1:3003:3000']
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/api/health']
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+    profiles: ['blue']
+
+  app_green:
+    <<: *app-common
+    ports: ['127.0.0.1:3004:3000']
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/api/health']
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+    profiles: ['green']
+
+  worker:
+    <<: *app-common
+    # The worker is TypeScript now so it shares the app's own GE maths rather
+    # than reimplementing it. worker.js is a shim that registers tsx and hands
+    # over, so `node worker.js` works too.
+    command: ['npm', 'run', 'worker']
+
+volumes:
+  pgdata:
+  redisdata:

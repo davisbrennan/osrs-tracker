@@ -1,0 +1,96 @@
+/* Design tokens — colours, spacing, type. Change things here, not in components. */
+
+/* ============================================================
+   The palette comes from the game's own interface, not from the
+   generic dark-dashboard playbook: Old School RuneScape's chrome
+   is tanned leather and stone, so every neutral here is warm and
+   brown-biased rather than a tinted grey. A trading screen people
+   stare at for an hour should feel like the client it sits beside.
+   ============================================================ */
+
+:root {
+  /* Warm darks, lightest-sounding name = lightest value */
+  --bg: #17120d;
+  --panel: #211a13;
+  --panel-2: #2b2219;
+  --rule: #3a2d20;
+  --rule-soft: #2c2318;
+
+  --text: #ece3d4;
+  --text-2: #c5b6a0;
+  --dim: #9d8f78;
+  --faint: #6d6252;
+
+  /* Gold is the currency, so it is the accent. Nothing else competes. */
+  --gold: #e0a32e;
+  --gold-dim: #a8781f;
+  --gold-wash: rgba(224, 163, 46, 0.1);
+
+  --profit: #5fc26a;
+  --loss: #d9534a;
+  --loss-wash: rgba(217, 83, 74, 0.12);
+
+  /* ------------------------------------------------------------
+     Stack-value colours, lifted straight from the game.
+     In OSRS an item stack is drawn yellow below 100k, white from
+     100k to 10m, and green above 10m. Players have read quantity
+     by colour for twenty years, so a gp figure here uses the same
+     three, and magnitude registers before the digits do. This is
+     the one piece of decoration in the system that is also
+     information.
+     ------------------------------------------------------------ */
+  --gp-small: #f5e042;
+  --gp-mid: #ffffff;
+  --gp-large: #46e05a;
+
+  /* Confidence in a margin. Deliberately not a traffic light:
+     "thin" and "stale" are cautions about the book, not errors. */
+  --conf-good: #5fc26a;
+  --conf-thin: #d9a13a;
+  --conf-stale: #8d7f6a;
+
+  /* Mapped from the old names so base.css and admin.css, which are
+     written against these, retone with the palette instead of
+     needing a rewrite. */
+  --ink-900: var(--text);
+  --ink-700: var(--text-2);
+  --ink-500: var(--dim);
+  --ink-300: var(--faint);
+  --ink-200: var(--rule);
+  --surface: var(--panel);
+  --surface-2: var(--panel-2);
+  --accent: var(--gold);
+  --accent-weak: var(--gold-wash);
+  --positive: var(--profit);
+  --alert: var(--loss);
+  --alert-weak: var(--loss-wash);
+
+  --r-sm: 3px;
+  --r-md: 5px;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 72px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 24px rgba(0, 0, 0, 0.45);
+
+  /* Two families, clearly distinct jobs: Archivo sets the interface,
+     Plex Mono sets every figure. Tabular numerals are not a style
+     choice in a price table — without them a column of gp amounts
+     fails to line up and becomes unreadable at a glance. */
+  --font-sans: var(--f-archivo), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: var(--f-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* The tool is dark by design rather than by preference, so there is no
+   light theme to toggle. Tell the browser, so form controls and
+   scrollbars follow instead of rendering light chrome on a dark page. */
+:root {
+  color-scheme: dark;
+}

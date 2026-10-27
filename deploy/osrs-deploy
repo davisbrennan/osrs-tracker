@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+#
+# Blue/green deploy for the OSRS tracker.
+#
+# Install to /usr/local/bin/osrs-deploy. Same shape as wedding-deploy, with
+# three differences that matter while both stacks coexist:
+#   - /srv/osrs, not /srv/wedding
+#   - ports 3003/3004, not 3001/3002
+#   - its own nginx upstream file, so flipping one never touches the other
+#
+set -euo pipefail
+
+cd /srv/osrs
+set -a
+source .env
+set +a
+
+UPSTREAM_CONF=/etc/nginx/conf.d/osrs-upstream.conf
+
+if grep -q 3003 "$UPSTREAM_CONF"; then
+  ACTIVE=blue;  IDLE=green; IDLE_PORT=3004
+else
+  ACTIVE=green; IDLE=blue;  IDLE_PORT=3003
+fi
+echo "==> active=$ACTIVE  deploying to=$IDLE (port $IDLE_PORT)"
+
+# 1. Safety dump before anything touches the schema.
+echo "==> pre-deploy database snapshot"
+mkdir -p backups
+docker compose exec -T db pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists \
+  | gzip > "backups/predeploy-$(date +%Y%m%d-%H%M%S).sql.gz"
+
+# 2. Fetch code.
+git -C app fetch --all --tags
+git -C app pull --ff-only
+NEW_SHA=$(git -C app rev-parse --short HEAD)
+mkdir -p releases
+cat releases/current 2>/dev/null > releases/previous || echo none > releases/previous
+echo "$NEW_SHA" > releases/current
+echo "==> building $NEW_SHA"
+
+# 3. Build — never touches the running container.
+#
+# next/font downloads the two font families from Google at build time. That
+# is the one step here that depends on a third party being up, and a blip
+# fails the whole deploy. If this step is what failed, retry before looking
+# for anything cleverer.
+APP_TAG=$NEW_SHA docker compose build --build-arg GIT_SHA="$NEW_SHA" app_blue
+
+# 4. Migrate. Migrations must be backward-compatible: the old container is
+#    still serving traffic at this point.
+echo "==> migrating"
+APP_TAG=$NEW_SHA docker compose run --rm --no-deps app_blue npm run db:migrate
+
+# 5. Boot the idle slot.
+echo "==> starting $IDLE"
+APP_TAG=$NEW_SHA docker compose --profile "$IDLE" up -d "app_$IDLE"
+
+# 6. Wait for health.
+for i in $(seq 1 30); do
+  if curl -fsS "http://127.0.0.1:${IDLE_PORT}/api/health" > /dev/null 2>&1; then
+    echo "==> $IDLE healthy after ${i}s"; break
+  fi
+  if [ "$i" = "30" ]; then
+    echo "!! $IDLE never became healthy — aborting. $ACTIVE is still serving."
+    docker compose logs --tail=50 "app_$IDLE"
+    docker compose stop "app_$IDLE"
+    exit 1
+  fi
+  sleep 1
+done
+
+# 7. Flip nginx.
+echo "==> switching traffic to $IDLE"
+sudo tee "$UPSTREAM_CONF" > /dev/null <<CONF
+upstream osrs_app {
+    server 127.0.0.1:${IDLE_PORT};   # ${IDLE}
+    keepalive 32;
+}
+CONF
+sudo nginx -t && sudo systemctl reload nginx
+
+# 8. Restart the worker on the new image, drain the old slot.
+APP_TAG=$NEW_SHA docker compose up -d --no-deps worker
+sleep 15
+docker compose stop "app_$ACTIVE"
+
+# 9. Dangling images only — keeps rollback images intact.
+docker image prune -f
+echo "==> deployed $NEW_SHA on $IDLE. Rollback: osrs-rollback"
+echo "==> worker: docker compose logs -f worker"

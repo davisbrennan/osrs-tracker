@@ -1,0 +1,23 @@
+/*
+ * Entry point for global styles.
+ *
+ * The real rules live in src/styles/, split by where you'd go looking for
+ * them. Order matters: tokens define the variables everything else uses, and
+ * base sets element defaults that later files override.
+ *
+ *   tokens     colours, spacing, type scale — change things here
+ *   base       forms, lists, cards, modals
+ *   auth       sign in — no shell, no chrome
+ *   shell      signed-in app: masthead, tabs, content frame
+ *   app        the tool itself: flip table, item pages, figures
+ *   marketing  the signed-out landing and legal pages
+ *   admin      the operator panel at /admin
+ */
+
+@import '../styles/tokens.css';
+@import '../styles/base.css';
+@import '../styles/auth.css';
+@import '../styles/shell.css';
+@import '../styles/app.css';
+@import '../styles/marketing.css';
+@import '../styles/admin.css';

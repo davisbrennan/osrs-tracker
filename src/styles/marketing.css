@@ -1,0 +1,280 @@
+/* The signed-out landing and the legal pages. */
+
+/* ============================================================
+   Hero
+   Two columns: the claim on the left, the arithmetic that proves
+   it on the right. The worked example is the hero — it earns the
+   space by being live data rather than an illustration.
+   ============================================================ */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: var(--s-7);
+  align-items: start;
+  padding: var(--s-7) 0 var(--s-8);
+}
+
+.hero-title {
+  font-size: clamp(27px, 4.1vw, 44px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  margin: 0 0 var(--s-4);
+  max-width: 24ch;
+  text-wrap: balance;
+}
+
+.hero-sub {
+  color: var(--text-2);
+  font-size: 16px;
+  line-height: 1.55;
+  margin: 0 0 var(--s-5);
+  max-width: 54ch;
+}
+
+.hero-actions {
+  align-items: center;
+  display: flex;
+  gap: var(--s-4);
+  margin: 0;
+}
+
+.btn-primary {
+  background: var(--gold);
+  border-radius: var(--r-md);
+  color: #1c1409;
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 20px;
+  text-decoration: none;
+}
+.btn-primary:hover {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.hero-sum {
+  font-size: 14px;
+}
+.hero-sum dd .num {
+  font-size: 14px;
+}
+.sum-foot {
+  border-top: 1px solid var(--rule);
+  color: var(--dim);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: var(--s-4) 0 0;
+  padding-top: var(--s-3);
+}
+
+/* ============================================================
+   The three claims. Not cards: a rule between them is enough,
+   and three identical boxes with a shadow is the look every
+   generated page reaches for.
+   ============================================================ */
+
+.rows {
+  border-top: 1px solid var(--rule);
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.row {
+  border-right: 1px solid var(--rule);
+  padding: var(--s-5) var(--s-5) var(--s-6) 0;
+}
+.row:last-child {
+  border-right: 0;
+}
+.row:not(:first-child) {
+  padding-left: var(--s-5);
+}
+.row h2 {
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  margin-bottom: var(--s-3);
+}
+.row p {
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1.62;
+  margin: 0;
+  max-width: 42ch;
+}
+
+/* ============================================================
+   Setup steps. Numbered, because this genuinely is a sequence.
+   ============================================================ */
+
+.steps {
+  border-top: 1px solid var(--rule);
+  padding: var(--s-6) 0;
+}
+
+.step-list {
+  counter-reset: step;
+  display: grid;
+  gap: var(--s-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.step-list li {
+  counter-increment: step;
+  padding-left: var(--s-6);
+  position: relative;
+}
+.step-list li::before {
+  color: var(--gold-dim);
+  content: counter(step);
+  font-family: var(--font-mono);
+  font-size: 19px;
+  left: 0;
+  position: absolute;
+  top: -2px;
+}
+.step-list strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.step-list span {
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ============================================================
+   Questions
+   ============================================================ */
+
+.faq {
+  border-top: 1px solid var(--rule);
+  padding: var(--s-6) 0;
+}
+.faq-list {
+  display: grid;
+  gap: var(--s-5);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+.faq-list dt {
+  font-weight: 600;
+  margin-bottom: var(--s-1);
+}
+.faq-list dd {
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1.62;
+  margin: 0;
+  max-width: 54ch;
+}
+
+.foot {
+  border-top: 1px solid var(--rule);
+  color: var(--faint);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: var(--s-4);
+  justify-content: space-between;
+  padding: var(--s-5) 0 var(--s-7);
+}
+.foot p {
+  margin: 0;
+}
+.foot a {
+  color: var(--dim);
+  margin-right: var(--s-3);
+}
+
+.signin-link {
+  color: var(--gold);
+  font-size: 13px;
+  padding: var(--s-3) var(--s-2);
+  text-decoration: none;
+}
+.signin-link:hover {
+  color: var(--text);
+}
+
+/* ============================================================
+   Legal pages — long-form reading, so the measure narrows.
+   ============================================================ */
+
+.legal {
+  max-width: 68ch;
+  padding: var(--s-6) 0 var(--s-8);
+}
+.legal h1 {
+  margin-bottom: var(--s-2);
+}
+.legal h2 {
+  border-top: 1px solid var(--rule);
+  font-size: 15px;
+  margin: var(--s-6) 0 var(--s-3);
+  padding-top: var(--s-5);
+}
+.legal p,
+.legal li {
+  color: var(--text-2);
+  line-height: 1.65;
+}
+.legal ul {
+  padding-left: var(--s-5);
+}
+.legal .updated {
+  color: var(--faint);
+  font-size: 12px;
+}
+.legal table {
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: var(--s-4) 0;
+  width: 100%;
+}
+.legal th,
+.legal td {
+  border-bottom: 1px solid var(--rule-soft);
+  padding: var(--s-2) var(--s-3) var(--s-2) 0;
+  text-align: left;
+  vertical-align: top;
+}
+.legal th {
+  color: var(--dim);
+  font-weight: 500;
+}
+
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: var(--s-5);
+    padding: var(--s-5) 0 var(--s-6);
+  }
+  .rows,
+  .step-list,
+  .faq-list {
+    grid-template-columns: 1fr;
+  }
+  .row {
+    border-bottom: 1px solid var(--rule);
+    border-right: 0;
+    padding: var(--s-5) 0;
+  }
+  .row:not(:first-child) {
+    padding-left: 0;
+  }
+  .row:last-child {
+    border-bottom: 0;
+  }
+}
+
+.hero-copy {
+  min-width: 0;
+}

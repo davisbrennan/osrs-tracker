@@ -1,0 +1,106 @@
+/*
+ * Pages with no app shell and no marketing chrome: sign in, onboarding,
+ * accepting an invitation. One task on an empty page.
+ *
+ * The card is the <main> itself, not its children. An earlier version styled
+ * `.plain-page > *`, which turned every heading, paragraph and form into its
+ * own card sitting in a row — these pages have several top-level elements, not
+ * one wrapper.
+ */
+
+.plain-page {
+  min-height: 100dvh;
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+
+  width: 100%;
+  max-width: 27rem;
+  margin: 0 auto;
+  padding: var(--s-6) var(--s-5);
+  gap: var(--s-2);
+}
+
+.plain-page h1 {
+  font-family: var(--font-serif);
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--s-2);
+}
+
+.plain-page > p {
+  color: var(--ink-500);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: var(--s-4);
+  max-width: 34ch;
+}
+
+.plain-page form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.plain-page form button[type='submit'] {
+  margin-top: var(--s-4);
+  align-self: stretch;
+  text-align: center;
+}
+
+.plain-page .muted {
+  font-size: 13px;
+}
+
+/* Onboarding asks several questions, so it needs a wider column. */
+.plain-page.wide {
+  max-width: 32rem;
+}
+
+@media (max-width: 560px) {
+  .plain-page {
+    padding: var(--s-5) var(--s-4);
+  }
+}
+
+/*
+ * Event type picker — the first screen of onboarding.
+ *
+ * Two large targets rather than a dropdown: the choice sets the vocabulary and
+ * the seeded checklist and can't be changed afterwards, so it deserves more
+ * weight than a select buried in a form.
+ */
+.typepick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+}
+.typecard {
+  display: block;
+  padding: var(--s-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  text-decoration: none;
+  color: inherit;
+}
+.typecard:hover {
+  border-color: var(--ink-900);
+}
+.typecard strong {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 400;
+  margin-bottom: 3px;
+}
+.typecard span {
+  display: block;
+  font-size: 13px;
+  color: var(--ink-500);
+  line-height: 1.5;
+}
