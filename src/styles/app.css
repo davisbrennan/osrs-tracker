@@ -877,3 +877,204 @@ h2 .subtle {
 .pitch li strong {
   margin-bottom: 3px;
 }
+
+/* ============================================================
+   The book
+   Modelled on a trading blotter rather than a list of flips:
+   headline figures across the top, positions, then the audit
+   trail. Everything is right-aligned mono so columns of gp
+   compare by eye.
+   ============================================================ */
+
+.kpi-row {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  margin-bottom: var(--s-5);
+  overflow: hidden;
+}
+
+.kpi {
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-4);
+}
+.kpi dt {
+  color: var(--dim);
+  font-size: 11px;
+}
+.kpi dd {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 19px;
+  font-weight: 600;
+  margin: 0;
+}
+.kpi .subtle {
+  font-size: 11px;
+}
+
+/* Buy and sell carry the P&L colours rather than a third palette —
+   green is money coming in, red is money going out, everywhere. */
+.side-toggle {
+  display: flex;
+  gap: 0;
+}
+.side-toggle button {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  color: var(--dim);
+  cursor: pointer;
+  flex: 1;
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 0;
+}
+.side-toggle button:first-child {
+  border-radius: var(--r-sm) 0 0 var(--r-sm);
+}
+.side-toggle button:last-child {
+  border-left: 0;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+.side-toggle button.on.buy {
+  background: rgba(110, 208, 122, 0.16);
+  border-color: var(--profit);
+  color: var(--profit);
+}
+.side-toggle button.on.sell {
+  background: var(--loss-wash);
+  border-color: var(--loss);
+  color: var(--loss);
+}
+
+.side-buy {
+  color: var(--profit);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.side-sell {
+  color: var(--loss);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.stat-table-wrap {
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  overflow-x: auto;
+}
+.stat-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  width: 100%;
+}
+.stat-table th[scope='row'] {
+  color: var(--text-2);
+  font-weight: 400;
+  padding: var(--s-2) var(--s-4);
+  text-align: left;
+  white-space: nowrap;
+}
+.stat-table td {
+  padding: var(--s-2) var(--s-4);
+  white-space: nowrap;
+}
+.stat-table td:nth-child(2) {
+  text-align: right;
+  width: 1%;
+}
+.stat-table td:last-child {
+  color: var(--faint);
+  font-size: 12px;
+  white-space: normal;
+}
+.stat-table tr + tr th,
+.stat-table tr + tr td {
+  border-top: 1px solid var(--rule-soft);
+}
+
+/* ---------------------------------------------- concentration */
+
+.conc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.conc-list li {
+  align-items: center;
+  display: grid;
+  gap: var(--s-3);
+  grid-template-columns: minmax(0, 14ch) 1fr 4ch;
+  padding: 4px 0;
+}
+.conc-name {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conc-bar {
+  background: var(--bg);
+  border-radius: 2px;
+  height: 7px;
+  overflow: hidden;
+}
+.conc-bar span {
+  background: var(--gold);
+  display: block;
+  height: 100%;
+}
+.conc-list .num {
+  font-size: 12px;
+  text-align: right;
+}
+
+/* ---------------------------------------------- equity curve */
+
+.eq-fill {
+  opacity: 0.13;
+  stroke: none;
+}
+.eq-fill.up {
+  fill: var(--profit);
+}
+.eq-fill.down {
+  fill: var(--loss);
+}
+.chart-line.up {
+  stroke: var(--profit);
+}
+.chart-line.down {
+  stroke: var(--loss);
+}
+/* Breakeven. Dashed so it reads as a reference rather than data. */
+.chart-zero {
+  stroke: var(--dim);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+}
+.chart-tick.zero {
+  fill: var(--dim);
+}
+
+@media (max-width: 1000px) {
+  .kpi-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 620px) {
+  .kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .conc-list li {
+    grid-template-columns: minmax(0, 10ch) 1fr 4ch;
+  }
+}

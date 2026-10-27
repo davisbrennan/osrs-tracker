@@ -15,7 +15,8 @@
     "check": "npm run check:css && npm run check:layout && npx tsc --noEmit",
     "test:osrs": "tsx scripts/test-osrs.mjs",
     "test:jobs": "tsx scripts/test-jobs.mts",
-    "test:hiscores": "tsx scripts/test-hiscores-json.mts"
+    "test:hiscores": "tsx scripts/test-hiscores-json.mts",
+    "test:portfolio": "tsx scripts/test-portfolio.mts"
   },
   "dependencies": {
     "better-auth": "^1.7.1",

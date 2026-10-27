@@ -28,7 +28,7 @@ export const NAV = [
   { href: '/flips', label: 'Flip finder', key: 'flips', public: true },
   { href: '/items', label: 'Items', key: 'items', public: true },
   { href: '/accounts', label: 'Accounts', key: 'accounts', public: false },
-  { href: '/journal', label: 'Journal', key: 'journal', public: false },
+  { href: '/journal', label: 'Book', key: 'journal', public: false },
 ] as const;
 
 export type NavKey = (typeof NAV)[number]['key'] | 'settings' | 'admin';

@@ -258,3 +258,29 @@ export const osrsUserSettings = pgTable('osrs_user_settings', {
   }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// The trade blotter. Executions are the stored facts; positions, average
+// cost and realised P&L are derived in src/lib/osrs/portfolio.ts rather
+// than stored, so no aggregate can drift from the trades underneath it.
+export const osrsTrades = pgTable('osrs_trades', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  accountId: uuid('account_id').references(() => osrsAccounts.id, { onDelete: 'set null' }),
+  itemId: integer('item_id')
+    .notNull()
+    .references(() => osrsItems.id),
+  side: text('side').notNull(),
+  quantity: integer('quantity').notNull(),
+  /** Per unit. */
+  price: bigint('price', { mode: 'number' }).notNull(),
+  executedAt: timestamp('executed_at', { withTimezone: true }).notNull().defaultNow(),
+  /** Null on buys — the Grand Exchange taxes the seller only. */
+  taxPaid: bigint('tax_paid', { mode: 'number' }),
+  /** manual | import | plugin. A plugin fill should be distinguishable. */
+  source: text('source').notNull().default('manual'),
+  note: text('note'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

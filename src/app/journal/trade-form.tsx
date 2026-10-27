@@ -2,19 +2,20 @@
 
 import { useState, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { addFlip, searchItems, type ItemMatch } from '@/app/actions/flips';
+import { addTrade, searchItems, type ItemMatch } from '@/app/actions/trades';
 import { formatGp } from '@/lib/osrs/ge';
 
 /**
- * Logging a flip.
+ * One execution at a time.
  *
- * The item picker searches server-side rather than shipping a 4,000-item list
- * to the browser, and shows each result's current price — which doubles as
- * confirmation you picked the right "Rune scimitar" out of the several that
- * share most of a name.
+ * Deliberately not a "log a flip" form with buy and sell side by side. That
+ * shape encourages recording a round trip after the fact, which loses the
+ * thing that matters most: when each fill happened, and therefore which lot
+ * a later sell matches against.
  */
-export default function FlipForm() {
+export default function TradeForm() {
   const router = useRouter();
+  const [side, setSide] = useState<'buy' | 'sell'>('buy');
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<ItemMatch[]>([]);
   const [picked, setPicked] = useState<ItemMatch | null>(null);
@@ -27,11 +28,13 @@ export default function FlipForm() {
     setQuery(value);
     setPicked(null);
     if (debounce.current) clearTimeout(debounce.current);
-    // Debounced, because a query per keystroke is a query per keystroke.
     debounce.current = setTimeout(async () => {
       setMatches(value.trim().length < 2 ? [] : await searchItems(value));
     }, 180);
   }
+
+  /** The price you'd most likely be filling at, as a starting point. */
+  const suggested = picked ? (side === 'buy' ? picked.low : picked.high) : null;
 
   return (
     <form
@@ -39,7 +42,7 @@ export default function FlipForm() {
       className="flip-form"
       action={(formData) =>
         start(async () => {
-          const result = await addFlip(formData);
+          const result = await addTrade(formData);
           setNote({ text: result.ok ? result.message : result.error, ok: result.ok });
           if (result.ok) {
             formRef.current?.reset();
@@ -52,6 +55,29 @@ export default function FlipForm() {
       }
     >
       <input type="hidden" name="itemId" value={picked?.id ?? ''} />
+      <input type="hidden" name="side" value={side} />
+
+      <div className="flip-field">
+        <label htmlFor="side-toggle">Side</label>
+        <div className="side-toggle" id="side-toggle">
+          <button
+            type="button"
+            className={side === 'buy' ? 'on buy' : ''}
+            onClick={() => setSide('buy')}
+            aria-pressed={side === 'buy'}
+          >
+            Buy
+          </button>
+          <button
+            type="button"
+            className={side === 'sell' ? 'on sell' : ''}
+            onClick={() => setSide('sell')}
+            aria-pressed={side === 'sell'}
+          >
+            Sell
+          </button>
+        </div>
+      </div>
 
       <div className="flip-field wide">
         <label htmlFor="item-search">Item</label>
@@ -76,8 +102,7 @@ export default function FlipForm() {
                 >
                   <span>{m.name}</span>
                   <span className="subtle">
-                    {m.low === null ? 'no price' : `buy ${formatGp(m.low)}`}
-                    {m.members ? ' · members' : ''}
+                    {m.low === null ? 'no price' : `${formatGp(m.low)} / ${formatGp(m.high ?? 0)}`}
                   </span>
                 </button>
               </li>
@@ -92,13 +117,21 @@ export default function FlipForm() {
       </div>
 
       <div className="flip-field">
-        <label htmlFor="buyPrice">Bought at</label>
-        <input id="buyPrice" name="buyPrice" placeholder="1.5m" required autoComplete="off" />
+        <label htmlFor="price">Price each</label>
+        <input
+          id="price"
+          name="price"
+          key={suggested ?? 'none'}
+          defaultValue={suggested ? String(suggested) : ''}
+          placeholder="1.5m"
+          required
+          autoComplete="off"
+        />
       </div>
 
       <div className="flip-field">
-        <label htmlFor="sellPrice">Sold at</label>
-        <input id="sellPrice" name="sellPrice" placeholder="optional" autoComplete="off" />
+        <label htmlFor="executedAt">When</label>
+        <input id="executedAt" name="executedAt" type="datetime-local" />
       </div>
 
       <div className="flip-field wide">
@@ -108,13 +141,13 @@ export default function FlipForm() {
 
       <div className="flip-field">
         <button type="submit" disabled={pending || !picked}>
-          {pending ? 'Saving…' : 'Log it'}
+          {pending ? 'Saving…' : `Record ${side}`}
         </button>
       </div>
 
       <p className="subtle flip-hint">
-        Leave &ldquo;sold at&rdquo; blank to record an open position. Prices accept 1.5m, 250k or
-        1500000.
+        One fill per row — log each buy separately rather than combining them, or the average cost
+        will be wrong. Leave &ldquo;when&rdquo; blank for now. Prices accept 1.5m, 250k or 1500000.
       </p>
 
       {note && (
