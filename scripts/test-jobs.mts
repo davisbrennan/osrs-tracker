@@ -140,6 +140,26 @@ function hourlyBody() {
  * SKILLS shifts this fixture the same way it shifts production — the point
  * is to exercise the parser's self-check, not to hardcode past it.
  */
+/** The JSON endpoint's shape — named entries, which is the point of it. */
+function hiscoresJson(opts: { overallXp: number; bosses?: boolean }) {
+  return {
+    skills: SKILLS.map((m, i) => ({
+      id: i,
+      name: m.name,
+      rank: 500 + i,
+      level: m.key === 'overall' ? (SKILLS.length - 1) * 40 : 40,
+      xp: m.key === 'overall' ? opts.overallXp : 37_224,
+    })),
+    activities: opts.bosses
+      ? [
+          { id: 6, name: 'Clue Scrolls (all)', rank: 4000, score: 212 },
+          { id: 40, name: 'Zulrah', rank: 12000, score: 1043 },
+          { id: 50, name: 'Soul Wars Zeal', rank: 700, score: 5000 },
+        ]
+      : [],
+  };
+}
+
 function hiscoresBody(opts: { overallXp: number; rows?: number }) {
   const n = opts.rows ?? SKILLS.length;
   const individual = n - 1;
@@ -374,11 +394,18 @@ const [account] = await db
   .values({ userId: testUser.id, rsn: 'Zezima', rsnKey: 'zezima' })
   .returning({ id: osrsAccounts.id });
 
-route('index_lite.ws', () => ({ status: 200, body: hiscoresBody({ overallXp: 500_000 }) }));
+route('index_lite.json', () => ({
+  status: 200,
+  body: hiscoresJson({ overallXp: 500_000, bosses: true }),
+}));
 const hs1 = await syncHiscores({ now: new Date('2026-10-25T18:00:00.000Z') });
 eq('one account due', hs1.due, 1);
 eq('one snapshot written', hs1.synced, 1);
 eq('no parse warnings', (hs1.warnings as string[]).length, 0);
+ok(
+  'activities arrive NAMED, so bosses are safe to label',
+  JSON.stringify((await db.select().from(osrsSnapshots))[0].activities).includes('Zulrah')
+);
 
 const snaps = await db.select().from(osrsSnapshots);
 eq('one snapshot row', snaps.length, 1);
@@ -400,12 +427,16 @@ eq('counted as unchanged', sameXp.unchanged, 1);
 eq('still one snapshot row', (await db.select().from(osrsSnapshots)).length, 1);
 
 section('real progress does write a snapshot');
-route('index_lite.ws', () => ({ status: 200, body: hiscoresBody({ overallXp: 612_345 }) }));
+route('index_lite.json', () => ({ status: 200, body: hiscoresJson({ overallXp: 612_345 }) }));
 const grew = await syncHiscores({ now: new Date('2026-10-27T20:00:00.000Z') });
 eq('one written', grew.synced, 1);
 eq('two snapshot rows', (await db.select().from(osrsSnapshots)).length, 2);
 
 section('a short response is caught by the parser self-check, not stored silently');
+// JSON unavailable, so the CSV fallback runs — and the CSV's own
+// self-check catches a short response.
+routes.delete('index_lite.json');
+route('index_lite.json', () => ({ status: 500, body: 'down' }));
 route('index_lite.ws', () => ({
   status: 200,
   body: hiscoresBody({ overallXp: 700_000, rows: Math.max(2, SKILLS.length - 3) }),
@@ -418,7 +449,8 @@ ok(
 );
 
 section('a name the hiscores do not know is parked, not retried forever');
-route('index_lite.ws', () => ({ status: 404, body: 'not found' }));
+routes.delete('index_lite.ws');
+route('index_lite.json', () => ({ status: 404, body: 'not found' }));
 await db.insert(osrsAccounts).values({
   userId: testUser.id,
   rsn: 'Nonexistent Guy',
@@ -444,6 +476,7 @@ await db
   .update(osrsAccounts)
   .set({ lastSyncedAt: null, missingSince: null })
   .where(dbEq(osrsAccounts.id, account.id));
+route('index_lite.json', () => ({ status: 503, body: 'upstream down' }));
 route('index_lite.ws', () => ({ status: 503, body: 'upstream down' }));
 const failed = await syncHiscores({ now: new Date('2026-10-31T20:00:00.000Z') });
 ok('counted as failed', (failed.failed as number) >= 1);
@@ -453,7 +486,8 @@ const stillNull = (
 eq('last_synced_at deliberately left unset', stillNull.lastSyncedAt, null);
 
 section('the budget is respected');
-route('index_lite.ws', () => ({ status: 200, body: hiscoresBody({ overallXp: 800_000 }) }));
+routes.delete('index_lite.ws');
+route('index_lite.json', () => ({ status: 200, body: hiscoresJson({ overallXp: 800_000 }) }));
 await db.insert(osrsAccounts).values(
   Array.from({ length: 4 }, (_, i) => ({
     userId: testUser.id,

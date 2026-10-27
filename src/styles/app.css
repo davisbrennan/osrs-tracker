@@ -780,3 +780,100 @@ h1 .members {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ============================================================
+   Activity tags — bosses, clues, minigames
+   Dense and uniform: these are dozens of name/number pairs and
+   the only thing anyone scans for is "how many".
+   ============================================================ */
+
+.tag-grid {
+  display: grid;
+  gap: var(--s-2);
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+
+.tag {
+  align-items: baseline;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  justify-content: space-between;
+  padding: 7px 10px;
+}
+.tag-name {
+  font-size: 12px;
+  min-width: 0;
+}
+.tag-score {
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+h2 .subtle {
+  font-weight: 400;
+  margin-left: var(--s-2);
+}
+
+/* ============================================================
+   Signup pitch
+   Below the content it is pitching against, never above it —
+   a visitor from a search result should see the tool work
+   before being asked for anything.
+   ============================================================ */
+
+.pitch {
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  margin-top: var(--s-6);
+  padding: var(--s-5);
+}
+.pitch h2 {
+  margin-bottom: var(--s-3);
+}
+.pitch ul {
+  display: grid;
+  gap: var(--s-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  list-style: none;
+  margin: 0 0 var(--s-5);
+  padding: 0;
+}
+.pitch li {
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 46ch;
+}
+.pitch li strong {
+  color: var(--text);
+  display: block;
+}
+.pitch p {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  margin: 0;
+}
+.pitch .subtle {
+  max-width: 44ch;
+}
+
+@media (max-width: 760px) {
+  .pitch ul {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* strong is the item's title on its own line, so the description below it
+   needs a little air rather than sitting flush. */
+.pitch li strong {
+  margin-bottom: 3px;
+}

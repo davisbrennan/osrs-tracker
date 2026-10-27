@@ -9,26 +9,31 @@
    ============================================================ */
 
 :root {
-  /* Warm darks, lightest-sounding name = lightest value */
-  --bg: #17120d;
-  --panel: #211a13;
-  --panel-2: #2b2219;
-  --rule: #3a2d20;
-  --rule-soft: #2c2318;
+  /* Warm darks, lightest-sounding name = lightest value.
+     Lifted a step from the first pass: the original #17120d was closer to
+     black than to leather and made the panels disappear into the page.
+     Each surface is now clearly distinct from the one behind it, and the
+     muted text sits comfortably above the WCAG AA threshold instead of
+     scraping it. */
+  --bg: #221a13;
+  --panel: #2d241a;
+  --panel-2: #392e21;
+  --rule: #4d3e2c;
+  --rule-soft: #3b2f22;
 
-  --text: #ece3d4;
-  --text-2: #c5b6a0;
-  --dim: #9d8f78;
-  --faint: #6d6252;
+  --text: #f3ecdf;
+  --text-2: #d2c4ac;
+  --dim: #ab9c84;
+  --faint: #857862;
 
   /* Gold is the currency, so it is the accent. Nothing else competes. */
-  --gold: #e0a32e;
-  --gold-dim: #a8781f;
-  --gold-wash: rgba(224, 163, 46, 0.1);
+  --gold: #e8ae3c;
+  --gold-dim: #b98a2b;
+  --gold-wash: rgba(232, 174, 60, 0.12);
 
-  --profit: #5fc26a;
-  --loss: #d9534a;
-  --loss-wash: rgba(217, 83, 74, 0.12);
+  --profit: #6ed07a;
+  --loss: #e46259;
+  --loss-wash: rgba(228, 98, 89, 0.14);
 
   /* ------------------------------------------------------------
      Stack-value colours, lifted straight from the game.
@@ -39,15 +44,15 @@
      the one piece of decoration in the system that is also
      information.
      ------------------------------------------------------------ */
-  --gp-small: #f5e042;
+  --gp-small: #f7e55c;
   --gp-mid: #ffffff;
-  --gp-large: #46e05a;
+  --gp-large: #5ce86f;
 
   /* Confidence in a margin. Deliberately not a traffic light:
      "thin" and "stale" are cautions about the book, not errors. */
-  --conf-good: #5fc26a;
-  --conf-thin: #d9a13a;
-  --conf-stale: #8d7f6a;
+  --conf-good: #6ed07a;
+  --conf-thin: #e0ab45;
+  --conf-stale: #9b8c75;
 
   /* Mapped from the old names so base.css and admin.css, which are
      written against these, retone with the palette instead of
@@ -77,8 +82,8 @@
   --s-7: 48px;
   --s-8: 72px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 6px 24px rgba(0, 0, 0, 0.45);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 6px 24px rgba(0, 0, 0, 0.38);
 
   /* Two families, clearly distinct jobs: Archivo sets the interface,
      Plex Mono sets every figure. Tabular numerals are not a style

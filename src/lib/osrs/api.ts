@@ -14,9 +14,11 @@
  */
 
 import { parseHiscores, rsnToQuery, type Hiscores } from '@/lib/osrs/skills';
+import { parseHiscoresJson, type Activity } from '@/lib/osrs/hiscores-json';
 
 const PRICES_BASE = 'https://prices.runescape.wiki/api/v1/osrs';
-const HISCORES_URL = 'https://secure.runescape.com/m=hiscore_oldschool/index_lite.ws';
+// Without an extension; `.json` and `.ws` are appended per endpoint.
+const HISCORES_URL = 'https://secure.runescape.com/m=hiscore_oldschool/index_lite';
 
 function userAgent(): string {
   const contact = process.env.OSRS_CONTACT ?? 'contact-not-configured';
@@ -226,8 +228,17 @@ export async function fetchTimeseries(
 
 // ---------------------------------------------------------------- hiscores
 
+export type HiscoreData = {
+  skills: Hiscores['skills'];
+  /** Named rows — bosses, clues and minigames. Empty from the CSV fallback. */
+  activities: Activity[];
+  warnings: string[];
+  /** Which endpoint answered. Worth logging while the JSON one is new. */
+  source: 'json' | 'csv';
+};
+
 export type HiscoreResult =
-  { found: true; hiscores: Hiscores } | { found: false; reason: 'not-on-hiscores' };
+  { found: true; hiscores: HiscoreData } | { found: false; reason: 'not-on-hiscores' };
 
 /**
  * Look up an account.
@@ -238,10 +249,52 @@ export type HiscoreResult =
  * should tell the player "not ranked yet" rather than "something broke".
  */
 export async function fetchHiscores(rsn: string): Promise<HiscoreResult> {
+  const player = rsnToQuery(rsn);
+
+  // JSON first. Its rows are keyed by name, so a new skill or boss adds a
+  // row instead of shifting every value after it — which is the failure the
+  // positional CSV has and cannot detect reliably.
   try {
-    const res = await request(`${HISCORES_URL}?player=${rsnToQuery(rsn)}`);
+    const res = await request(`${HISCORES_URL}.json?player=${player}`);
+    const parsed = parseHiscoresJson(await res.json());
+    return {
+      found: true,
+      hiscores: {
+        skills: parsed.skills,
+        activities: parsed.activities,
+        warnings: parsed.warnings,
+        source: 'json',
+      },
+    };
+  } catch (err) {
+    if (err instanceof FetchError && err.status === 404) {
+      return { found: false, reason: 'not-on-hiscores' };
+    }
+    // Anything else — the endpoint is gone, the shape changed, a timeout —
+    // falls through to the CSV, which is older and less safe but has been
+    // stable for a decade.
+    console.warn(
+      `[osrs] hiscores JSON failed for ${rsn}, falling back to CSV:`,
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+
+  try {
+    const res = await request(`${HISCORES_URL}.ws?player=${player}`);
     const csv = await res.text();
-    return { found: true, hiscores: parseHiscores(csv) };
+    const parsed = parseHiscores(csv);
+    return {
+      found: true,
+      hiscores: {
+        skills: parsed.skills,
+        activities: [],
+        warnings: [
+          ...parsed.warnings,
+          'Read from the positional CSV because the JSON endpoint failed. Bosses and clues are unavailable from this path.',
+        ],
+        source: 'csv',
+      },
+    };
   } catch (err) {
     if (err instanceof FetchError && err.status === 404) {
       return { found: false, reason: 'not-on-hiscores' };

@@ -7,6 +7,7 @@ import { osrsAccounts, osrsSnapshots } from '@/database/schema';
 import { requireUser, MAX_TRACKED_ACCOUNTS } from '@/lib/session';
 import { normaliseRsn, combatLevel, type SkillRow } from '@/lib/osrs/skills';
 import { ACCOUNT_TYPES } from '@/lib/osrs/constants';
+import { type Activity } from '@/lib/osrs/hiscores-json';
 import { fetchHiscores, FetchError } from '@/lib/osrs/api';
 
 export type ActionResult = { ok: true; message: string } | { ok: false; error: string };
@@ -92,7 +93,7 @@ export async function addAccount(formData: FormData): Promise<ActionResult> {
     })
     .returning({ id: osrsAccounts.id });
 
-  await writeSnapshot(created.id, result.hiscores.skills, result.hiscores.activityRows);
+  await writeSnapshot(created.id, result.hiscores.skills, result.hiscores.activities);
 
   revalidatePath('/accounts');
   return { ok: true, message: `Tracking ${rsn}.` };
@@ -138,7 +139,7 @@ export async function refreshAccount(accountId: string): Promise<ActionResult> {
   const changed = await writeSnapshot(
     account.id,
     result.hiscores.skills,
-    result.hiscores.activityRows
+    result.hiscores.activities
   );
 
   revalidatePath('/accounts');
@@ -172,7 +173,7 @@ export async function removeAccount(accountId: string): Promise<ActionResult> {
 async function writeSnapshot(
   accountId: string,
   skills: Record<string, SkillRow>,
-  activities: { rank: number | null; score: number | null }[]
+  activities: Activity[]
 ): Promise<boolean> {
   const overall = skills.overall;
   const individual = Object.values(skills).filter((s) => s.key !== 'overall');

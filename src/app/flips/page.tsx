@@ -211,10 +211,41 @@ export default async function FlipFinder({ searchParams }: { searchParams: Promi
           )}
 
           {!user && (
-            <p className="subtle">
-              <Link href="/signin">Sign in</Link> to keep your cash stack, track your skills, log
-              flips and set price alerts. Everything on this page works without an account.
-            </p>
+            // The pitch sits BELOW the table on purpose. The table is the
+            // product; asking before showing is how you lose the visitor who
+            // came from a search result.
+            <section className="pitch">
+              <h2>What an account adds</h2>
+              <ul>
+                <li>
+                  <strong>Your cash stack is remembered</strong>Every margin on every page reprices
+                  to it, instead of resetting to a default each visit.
+                </li>
+                <li>
+                  <strong>A flip journal that knows the tax</strong>Log what you buy, and it tracks
+                  realised profit, open positions and what they&rsquo;d fetch right now. Most people
+                  do this in a spreadsheet that can&rsquo;t see live prices.
+                </li>
+                <li>
+                  <strong>Your account&rsquo;s progress</strong>Every skill, boss, clue and minigame
+                  from the hiscores, with goal estimates worked out from{' '}
+                  <em>your own measured XP rate</em> rather than a guide&rsquo;s optimal number.
+                </li>
+                <li>
+                  <strong>Price alerts by email</strong>Told when something crosses a threshold you
+                  set, with the margin and breakeven already worked out.
+                </li>
+              </ul>
+              <p>
+                <Link href="/signin" className="btn-primary">
+                  Create an account
+                </Link>
+                <span className="subtle">
+                  Email only — no password, nothing to reset. Everything on this page keeps working
+                  without one.
+                </span>
+              </p>
+            </section>
           )}
         </>
       )}

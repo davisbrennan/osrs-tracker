@@ -6,6 +6,7 @@ import { db } from '@/database';
 import { osrsAccounts, osrsSnapshots, osrsGoals } from '@/database/schema';
 import { currentUser, cashStackFor } from '@/lib/session';
 import { SKILLS, type SkillRow } from '@/lib/osrs/skills';
+import { recordedActivities, type Activity } from '@/lib/osrs/hiscores-json';
 import {
   formatXp,
   levelProgress,
@@ -50,6 +51,7 @@ export default async function AccountDetail({ params }: { params: Promise<{ id: 
       totalLevel: osrsSnapshots.totalLevel,
       combatLevel: osrsSnapshots.combatLevel,
       skills: osrsSnapshots.skills,
+      activities: osrsSnapshots.activities,
     })
     .from(osrsSnapshots)
     .where(eq(osrsSnapshots.accountId, account.id))
@@ -125,6 +127,17 @@ export default async function AccountDetail({ params }: { params: Promise<{ id: 
       achieved: xpRemaining <= 0,
     };
   });
+
+  // Activities are stored as NAMED rows now, so these are safe to label.
+  // Snapshots taken through the CSV fallback have none, which is why this
+  // tolerates a missing or differently-shaped value rather than assuming.
+  const rawActivities = current.activities;
+  const activities: Activity[] = Array.isArray(rawActivities)
+    ? (rawActivities as Activity[]).filter((a) => a && typeof a.name === 'string')
+    : [];
+  const bosses = recordedActivities(activities, 'boss');
+  const clues = recordedActivities(activities, 'clue');
+  const minigames = recordedActivities(activities, 'minigame');
 
   const maxed = ordered.filter((s) => s.level >= MAX_LEVEL).length;
   return (
@@ -252,12 +265,58 @@ export default async function AccountDetail({ params }: { params: Promise<{ id: 
         </div>
       </section>
 
-      <p className="subtle">
-        Bosses, clue scrolls and minigames are being recorded with every snapshot but aren&rsquo;t
-        shown yet. The hiscores return them as an unlabelled list, and showing them means being
-        certain which row is which — getting that wrong would attach real numbers to the wrong boss
-        and look entirely plausible. They go in once the order is verified against a known account.
-      </p>
+      {activities.length === 0 ? (
+        <p className="subtle">
+          No boss, clue or minigame data on this snapshot. It arrives on the next refresh — earlier
+          readings came through the positional CSV, which returns these rows unlabelled.
+        </p>
+      ) : (
+        <>
+          {clues.length > 0 && (
+            <section className="chart-block">
+              <h2>Clue scrolls</h2>
+              <div className="tag-grid">
+                {clues.map((c) => (
+                  <article key={c.name} className="tag">
+                    <span className="tag-name">{c.name.replace(/^Clue Scrolls?\s*/i, '')}</span>
+                    <span className="num tag-score">{c.score!.toLocaleString('en-US')}</span>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {bosses.length > 0 && (
+            <section className="chart-block">
+              <h2>
+                Bosses <span className="subtle">{bosses.length} with a kill recorded</span>
+              </h2>
+              <div className="tag-grid">
+                {bosses.map((b) => (
+                  <article key={b.name} className="tag">
+                    <span className="tag-name">{b.name}</span>
+                    <span className="num tag-score">{b.score!.toLocaleString('en-US')}</span>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {minigames.length > 0 && (
+            <section className="chart-block">
+              <h2>Minigames and activities</h2>
+              <div className="tag-grid">
+                {minigames.map((m) => (
+                  <article key={m.name} className="tag">
+                    <span className="tag-name">{m.name}</span>
+                    <span className="num tag-score">{m.score!.toLocaleString('en-US')}</span>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
     </AppShell>
   );
 }

@@ -10,6 +10,7 @@
 import { eq, sql, and, isNull, or, lt, desc } from 'drizzle-orm';
 import { db } from '@/database';
 import { osrsAccounts, osrsSnapshots } from '@/database/schema';
+import { type Activity } from '@/lib/osrs/hiscores-json';
 import { fetchHiscores } from '@/lib/osrs/api';
 import { FetchError } from '@/lib/osrs/api';
 import { combatLevel, type SkillRow } from '@/lib/osrs/skills';
@@ -91,7 +92,7 @@ export async function syncHiscores(
       const stored = await storeSnapshot(
         account.id,
         result.hiscores.skills,
-        result.hiscores.activityRows,
+        result.hiscores.activities,
         now
       );
       if (stored) synced++;
@@ -129,7 +130,7 @@ export async function syncHiscores(
 async function storeSnapshot(
   accountId: string,
   skills: Record<string, SkillRow>,
-  activities: { rank: number | null; score: number | null }[],
+  activities: Activity[],
   now: Date
 ): Promise<boolean> {
   const overall = skills.overall;

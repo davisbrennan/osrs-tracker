@@ -154,6 +154,13 @@ export default async function Items({
             </table>
           </div>
 
+          {!user && (
+            <p className="subtle">
+              <Link href="/signin">An account</Link> adds price alerts on any item here, a flip
+              journal that works out the tax for you, and skill tracking from the hiscores.
+            </p>
+          )}
+
           {(page > 1 || hasMore) && (
             <p className="toolbar">
               {page > 1 && <Link href={href({ page: String(page - 1) })}>Previous</Link>}
