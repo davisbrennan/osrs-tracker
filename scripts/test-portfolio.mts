@@ -335,5 +335,32 @@ console.log('--- equity curve is cumulative ---');
   ok('time only moves forward', curve[2].t > curve[1].t && curve[1].t > curve[0].t);
 }
 
+console.log('--- a ticket round trip still matches the OLDEST lot ---');
+{
+  seq = 0;
+  // The ticket can write a buy and its sell together. That pairing is a
+  // convenience in the form, NOT a hint to the matcher: if an older lot of
+  // the same item is open, FIFO closes THAT one.
+  //
+  // This is here because the success message once reported profit computed
+  // against the price typed into the form, which disagreed with the book by
+  // the difference between the two lots.
+  const old = t('buy', 2, 14_100_000, 1);
+  const buy = t('buy', 2, 14_000_000, 5);
+  const sell = t('sell', 2, 15_000_000, 5);
+  const p = buildPortfolio([old, buy, sell], noMarks);
+
+  eq('one close', p.closes.length, 1);
+  eq('matched against the older, dearer lot', p.closes[0].buyPrice, 14_100_000);
+  const tax = geTax(15_000_000, WHIP);
+  eq('profit follows that lot', p.closes[0].profit, (15_000_000 - tax - 14_100_000) * 2);
+  ok(
+    'and NOT the price typed on the ticket',
+    p.closes[0].profit !== (15_000_000 - tax - 14_000_000) * 2
+  );
+  eq('the newer lot stays open', p.positions[0].quantity, 2);
+  eq('at its own price', p.positions[0].avgCost, 14_000_000);
+}
+
 console.log(`\n${checks} checks — ${fail === 0 ? 'all passed' : `${fail} FAILED`}`);
 process.exit(fail ? 1 : 0);

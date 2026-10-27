@@ -93,6 +93,11 @@
   font-weight: 400;
   text-align: left;
 }
+/* `.left` only ever had a rule under `thead th`, so a body cell marked
+   left — the blotter's Side and Item columns — was silently right-aligned. */
+.flips tbody td.left {
+  text-align: left;
+}
 .flips tbody tr:last-child td,
 .flips tbody tr:last-child th {
   border-bottom: 0;
@@ -1077,4 +1082,141 @@ h2 .subtle {
   .conc-list li {
     grid-template-columns: minmax(0, 10ch) 1fr 4ch;
   }
+}
+
+/* ------------------------------------------------------------------
+   Sub-navigation inside the book
+
+   Styled as a segmented control, not as tabs. The masthead already
+   has a tab strip; a second identical one directly beneath it reads
+   as "which of these two rows am I in?" — which is the confusion
+   this is meant to remove, not add to.
+   ------------------------------------------------------------------ */
+.book-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  margin-bottom: var(--s-5);
+  overflow: hidden;
+}
+.book-views a {
+  align-items: center;
+  background: var(--panel);
+  color: var(--dim);
+  display: flex;
+  flex: 1 1 auto;
+  font-size: 13px;
+  gap: var(--s-2);
+  justify-content: center;
+  min-width: 120px;
+  padding: 10px var(--s-3);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.book-views a:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+.book-views a[aria-current] {
+  background: var(--gold-wash);
+  box-shadow: inset 0 -2px 0 var(--gold);
+  color: var(--gold);
+  font-weight: 600;
+}
+/* The one segment that does something rather than showing something. */
+.book-views a.bv-record {
+  color: var(--text);
+}
+.book-views a.bv-record::before {
+  content: '+';
+  font-family: var(--font-mono);
+  opacity: 0.6;
+}
+.bv-count {
+  background: var(--bg);
+  border-radius: 999px;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 7px;
+}
+.book-views a[aria-current] .bv-count {
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--gold);
+}
+
+/* ------------------------------------------------------------------
+   The optional sell leg on the ticket
+
+   Off by default and visually quieter than the rest of the form,
+   because it is a convenience rather than a step. An open position
+   is a legitimate end state.
+   ------------------------------------------------------------------ */
+.flip-field.ticket-close {
+  border-top: 1px dashed var(--rule);
+  grid-column: 1 / -1;
+  padding-top: var(--s-3);
+}
+.ticket-opt {
+  align-items: center;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  gap: var(--s-2);
+}
+.ticket-opt input {
+  accent-color: var(--gold);
+  cursor: pointer;
+  height: 14px;
+  width: 14px;
+}
+.ticket-opt-hint {
+  margin: var(--s-2) 0 0;
+  max-width: 62ch;
+}
+.ticket-close-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+}
+.ticket-close-row label {
+  font-size: 13px;
+}
+.ticket-close-row input {
+  max-width: 140px;
+}
+.ticket-close-row .subtle {
+  flex: 1 1 24ch;
+}
+
+
+/* ------------------------------------------------------------------
+   The book's own alert
+
+   Not .adm-warn: that one is the admin panel's, and hardcodes a
+   light cream background that reads as a foreign object on a dark
+   page. It also carries a 58ch max-width meant for prose columns,
+   which left this sitting at a third of the width of everything
+   around it.
+   ------------------------------------------------------------------ */
+.book-warn {
+  background: var(--gold-wash);
+  border: 1px solid var(--gold);
+  border-left-width: 3px;
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0 0 var(--s-5);
+  padding: 10px var(--s-3);
+}
+.book-warn strong {
+  color: var(--gold);
 }

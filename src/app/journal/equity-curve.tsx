@@ -74,8 +74,10 @@ export default function EquityCurve({ points }: { points: Point[] }) {
           </clipPath>
         </defs>
 
+        {/* Drop any gridline that would crowd the zero line — breakeven is
+            the label that matters, and a tick 15px away just fights it. */}
         {[hi, (hi + lo) / 2, lo]
-          .filter((v) => Math.abs(y(v) - zeroY) > 14)
+          .filter((v) => Math.abs(y(v) - zeroY) > 22)
           .map((v, i) => (
             <g key={i}>
               <line x1={PAD.left} x2={W - PAD.right} y1={y(v)} y2={y(v)} className="chart-grid" />

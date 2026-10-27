@@ -43,11 +43,16 @@ export async function searchItems(query: string): Promise<ItemMatch[]> {
 }
 
 /**
- * Record one execution.
+ * Record an execution, and optionally the sell that closed it.
  *
- * A fill, not a round trip. Buying 10,000 death runes takes several buys
- * because of the four-hour limit, and each is logged separately — which is
- * what lets the cost basis be right when they went in at different prices.
+ * The stored unit is still a single fill — buying 10,000 death runes takes
+ * several buys because of the four-hour limit, and each is its own row, which
+ * is what lets the cost basis be right when they went in at different prices.
+ *
+ * But a lot of flips genuinely are one buy and one sell, and making someone
+ * submit the form twice for that is friction with no payoff. So "sold at" is
+ * offered and writes a SECOND row rather than a combined one. Convenience in
+ * the form, correctness in the table.
  */
 export async function addTrade(formData: FormData): Promise<ActionResult> {
   const user = await requireUser();
@@ -59,6 +64,10 @@ export async function addTrade(formData: FormData): Promise<ActionResult> {
   const whenRaw = String(formData.get('executedAt') ?? '').trim();
   const note = String(formData.get('note') ?? '').trim() || null;
 
+  // Optional, and only meaningful on a buy.
+  const closeRaw = String(formData.get('closePrice') ?? '').trim();
+  const closePrice = closeRaw ? parseGp(closeRaw) : null;
+
   if (side !== 'buy' && side !== 'sell') return { ok: false, error: 'Pick buy or sell.' };
   if (!Number.isInteger(itemId) || itemId <= 0) return { ok: false, error: 'Pick an item.' };
   if (!Number.isInteger(quantity) || quantity <= 0) {
@@ -66,6 +75,14 @@ export async function addTrade(formData: FormData): Promise<ActionResult> {
   }
   if (price === null || price < 0) {
     return { ok: false, error: 'Price must be a number — 1.5m, 250k and 1500000 all work.' };
+  }
+  if (closeRaw) {
+    if (side !== 'buy') {
+      return { ok: false, error: '“Sold at” only applies to a buy. Record the sell on its own.' };
+    }
+    if (closePrice === null || closePrice < 0) {
+      return { ok: false, error: '“Sold at” must be a number, or leave it blank.' };
+    }
   }
 
   // A blank time means now. A supplied one is accepted so a session's worth
@@ -92,19 +109,54 @@ export async function addTrade(formData: FormData): Promise<ActionResult> {
   // change to the GE's rate must not rewrite what you actually paid.
   const taxPaid = side === 'sell' ? geTax(price, itemId) * quantity : null;
 
-  await db.insert(osrsTrades).values({
-    userId: user.id,
-    itemId,
-    side,
-    quantity,
-    price,
-    executedAt,
-    taxPaid,
-    source: 'manual',
-    note,
-  });
+  const rows: (typeof osrsTrades.$inferInsert)[] = [
+    {
+      userId: user.id,
+      itemId,
+      side,
+      quantity,
+      price,
+      executedAt,
+      taxPaid,
+      source: 'manual',
+      note,
+    },
+  ];
+
+  if (closePrice !== null) {
+    rows.push({
+      userId: user.id,
+      itemId,
+      side: 'sell',
+      quantity,
+      price: closePrice,
+      // A second later, so FIFO can never order the sell before its buy
+      // when both are recorded at the same instant.
+      executedAt: new Date(executedAt.getTime() + 1000),
+      taxPaid: geTax(closePrice, itemId) * quantity,
+      source: 'manual',
+      note,
+    });
+  }
+
+  await db.insert(osrsTrades).values(rows);
 
   revalidatePath('/journal');
+
+  if (closePrice !== null) {
+    // Deliberately no profit figure here.
+    //
+    // It is tempting to report (sell - tax - buy) x qty, and it would be
+    // wrong whenever an older lot of this item is still open: FIFO matches
+    // the sell against THAT lot, not against the buy typed into this form.
+    // Quoting a number the book then contradicts is worse than quoting none,
+    // and reproducing the matching here would mean a second implementation
+    // of the engine that could drift from the real one.
+    return {
+      ok: true,
+      message: `Recorded a buy and a sell of ${quantity.toLocaleString('en-US')} × ${item.name}. The sell is matched against your oldest open lot, so the realised figure is whatever the book says.`,
+    };
+  }
   return {
     ok: true,
     message: `${side === 'buy' ? 'Bought' : 'Sold'} ${quantity.toLocaleString('en-US')} × ${item.name}.`,
