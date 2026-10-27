@@ -85,3 +85,51 @@ export async function cashStackFor(userId: string | null): Promise<number> {
   const settings = await userSettings(userId);
   return settings?.cashStack ?? DEFAULT_CASH_STACK;
 }
+
+/**
+ * Best level per skill across every account the user tracks.
+ *
+ * The question a money-maker list answers is "can I do this?", and if any of
+ * their accounts can, the answer is yes. Keyed by display name ("Herblore")
+ * to match how methods state their requirements.
+ *
+ * Returns an empty map when nothing is tracked, which the caller must read
+ * as "unknown" rather than "level 1" — a method should not be marked locked
+ * because we have no hiscores.
+ */
+export async function bestLevelsFor(userId: string | null): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (!userId) return out;
+
+  const { osrsAccounts, osrsSnapshots } = await import('@/database/schema');
+  const { eq, desc } = await import('drizzle-orm');
+  const { db: database } = await import('@/database');
+  const { SKILLS } = await import('@/lib/osrs/skills');
+
+  const accounts = await database
+    .select({ id: osrsAccounts.id })
+    .from(osrsAccounts)
+    .where(eq(osrsAccounts.userId, userId));
+
+  for (const account of accounts) {
+    const [snapshot] = await database
+      .select({ skills: osrsSnapshots.skills })
+      .from(osrsSnapshots)
+      .where(eq(osrsSnapshots.accountId, account.id))
+      .orderBy(desc(osrsSnapshots.takenAt))
+      .limit(1);
+    if (!snapshot) continue;
+
+    const skills = snapshot.skills as Record<string, { level?: number }> | null;
+    if (!skills) continue;
+
+    for (const meta of SKILLS) {
+      const level = skills[meta.key]?.level;
+      if (typeof level !== 'number') continue;
+      const best = out.get(meta.name);
+      if (best === undefined || level > best) out.set(meta.name, level);
+    }
+  }
+
+  return out;
+}

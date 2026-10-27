@@ -15,6 +15,7 @@
 
 import { parseHiscores, rsnToQuery, type Hiscores } from '@/lib/osrs/skills';
 import { parseHiscoresJson, type Activity } from '@/lib/osrs/hiscores-json';
+import { buildExtractsUrl, parseExtracts, type WikiEntry } from '@/lib/osrs/wiki';
 
 const PRICES_BASE = 'https://prices.runescape.wiki/api/v1/osrs';
 // Without an extension; `.json` and `.ws` are appended per endpoint.
@@ -317,4 +318,26 @@ function numOrNull(v: unknown): number | null {
   if (typeof v !== 'number' && typeof v !== 'string') return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+/* ------------------------------------------------------------------------
+   The wiki's MediaWiki API, for item descriptions.
+
+   A different host and a different licence from the prices API — see the
+   header of lib/osrs/wiki.ts before using anything this returns.
+   ------------------------------------------------------------------------ */
+
+/**
+ * Lead-section summaries for a batch of article titles.
+ *
+ * Titles the wiki has no article for come back as null rather than missing
+ * from the map, so the caller can tell "no article" apart from "not asked".
+ */
+export async function fetchWikiSummaries(
+  titles: string[]
+): Promise<Map<string, WikiEntry | null>> {
+  if (titles.length === 0) return new Map();
+  const res = await request(buildExtractsUrl(titles));
+  const payload: unknown = await res.json();
+  return parseExtracts(payload, titles);
 }

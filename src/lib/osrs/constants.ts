@@ -1,5 +1,5 @@
 /**
- * Shared constants for the account and goal screens.
+ * Shared constants for the account, goal and alert screens.
  *
  * These live here rather than beside the server actions that use them
  * because a file marked 'use server' may only export async functions —
@@ -18,3 +18,15 @@ export const ACCOUNT_TYPES = [
 
 /** Goals per account. Enough to plan with, few enough to stay readable. */
 export const MAX_GOALS = 10;
+
+/**
+ * Alerts per person.
+ *
+ * Every active alert is evaluated on every price poll, and each one that
+ * fires sends an email from a shared sending reputation. Forty is more than
+ * anyone needs and well short of a problem.
+ */
+export const MAX_ALERTS = 40;
+
+/** Shortest gap between repeat emails for one alert. */
+export const MIN_COOLDOWN_MINUTES = 30;

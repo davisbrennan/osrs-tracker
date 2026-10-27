@@ -2,8 +2,15 @@
 
 import { useState, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { addTrade, searchItems, type ItemMatch } from '@/app/actions/trades';
-import { formatGp } from '@/lib/osrs/ge';
+import {
+  addTrade,
+  searchItems,
+  itemContext,
+  type ItemMatch,
+  type ItemContext,
+} from '@/app/actions/trades';
+import { formatGp, geTax, parseGp } from '@/lib/osrs/ge';
+import { formatResetIn } from '@/lib/osrs/limits';
 
 /**
  * The ticket.
@@ -25,6 +32,13 @@ export default function TradeForm() {
   const [matches, setMatches] = useState<ItemMatch[]>([]);
   const [picked, setPicked] = useState<ItemMatch | null>(null);
   const [alsoSell, setAlsoSell] = useState(false);
+  // What the order would do, recomputed as you type. The arithmetic is the
+  // same pure geTax the server uses, so the preview cannot disagree with
+  // what gets written.
+  const [qty, setQty] = useState('1');
+  const [priceText, setPriceText] = useState('');
+  const [closeText, setCloseText] = useState('');
+  const [context, setContext] = useState<ItemContext | null>(null);
   const [note, setNote] = useState<{ text: string; ok: boolean } | null>(null);
   const [pending, start] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -33,6 +47,7 @@ export default function TradeForm() {
   function onQueryChange(value: string) {
     setQuery(value);
     setPicked(null);
+    setContext(null);
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(async () => {
       setMatches(value.trim().length < 2 ? [] : await searchItems(value));
@@ -41,6 +56,42 @@ export default function TradeForm() {
 
   /** The price you'd most likely be filling at, as a starting point. */
   const suggested = picked ? (side === 'buy' ? picked.low : picked.high) : null;
+
+  /* ------------------------------------------------------------------ preview
+     What this order does, before it is committed. Every figure comes from the
+     same pure functions the server action calls, so the preview and the stored
+     row cannot disagree — the alternative is a second implementation of the
+     tax rule that drifts. */
+  const q = Number(qty);
+  const unit = parseGp(priceText);
+  const closeUnit = closeText.trim() ? parseGp(closeText) : null;
+  const liveQty = Number.isInteger(q) && q > 0 ? q : null;
+  const preview =
+    picked && liveQty !== null && unit !== null && unit >= 0
+      ? (() => {
+          const gross = unit * liveQty;
+          const tax = side === 'sell' ? geTax(unit, picked.id) * liveQty : 0;
+          const net = gross - tax;
+          // Against the lots currently open — which is what FIFO will match.
+          const basis =
+            side === 'sell' && context?.avgCost != null
+              ? Math.round(context.avgCost) * liveQty
+              : null;
+          const roundTrip =
+            side === 'buy' && closeUnit !== null && closeUnit >= 0
+              ? closeUnit * liveQty - geTax(closeUnit, picked.id) * liveQty - gross
+              : null;
+          return { gross, tax, net, pnl: basis === null ? null : net - basis, roundTrip };
+        })()
+      : null;
+
+  /* Buying more than the four-hour window allows is the commonest way a
+     planned fill silently does not happen. Say so before it is recorded. */
+  const overLimit =
+    side === 'buy' &&
+    liveQty !== null &&
+    context?.limitRemaining != null &&
+    liveQty > context.limitRemaining;
 
   return (
     <form
@@ -56,6 +107,10 @@ export default function TradeForm() {
             setPicked(null);
             setMatches([]);
             setAlsoSell(false);
+            setQty('1');
+            setPriceText('');
+            setCloseText('');
+            setContext(null);
             router.refresh();
           }
         })
@@ -70,7 +125,10 @@ export default function TradeForm() {
           <button
             type="button"
             className={side === 'buy' ? 'on buy' : ''}
-            onClick={() => setSide('buy')}
+            onClick={() => {
+              setSide('buy');
+              if (picked?.low) setPriceText(String(picked.low));
+            }}
             aria-pressed={side === 'buy'}
           >
             Buy
@@ -81,6 +139,7 @@ export default function TradeForm() {
             onClick={() => {
               setSide('sell');
               setAlsoSell(false);
+              if (picked?.high) setPriceText(String(picked.high));
             }}
             aria-pressed={side === 'sell'}
           >
@@ -108,6 +167,8 @@ export default function TradeForm() {
                   onClick={() => {
                     setPicked(m);
                     setMatches([]);
+                    setPriceText(String((side === 'buy' ? m.low : m.high) ?? ''));
+                    start(async () => setContext(await itemContext(m.id)));
                   }}
                 >
                   <span>{m.name}</span>
@@ -123,7 +184,14 @@ export default function TradeForm() {
 
       <div className="flip-field">
         <label htmlFor="quantity">Quantity</label>
-        <input id="quantity" name="quantity" inputMode="numeric" defaultValue="1" required />
+        <input
+          id="quantity"
+          name="quantity"
+          inputMode="numeric"
+          value={qty}
+          onChange={(e) => setQty(e.target.value)}
+          required
+        />
       </div>
 
       <div className="flip-field">
@@ -131,9 +199,9 @@ export default function TradeForm() {
         <input
           id="price"
           name="price"
-          key={suggested ?? 'none'}
-          defaultValue={suggested ? String(suggested) : ''}
-          placeholder="1.5m"
+          value={priceText}
+          onChange={(e) => setPriceText(e.target.value)}
+          placeholder={suggested ? String(suggested) : '1.5m'}
           required
           autoComplete="off"
         />
@@ -167,6 +235,8 @@ export default function TradeForm() {
               <input
                 id="closePrice"
                 name="closePrice"
+                value={closeText}
+                onChange={(e) => setCloseText(e.target.value)}
                 placeholder={picked?.high ? String(picked.high) : '1.6m'}
                 autoComplete="off"
                 inputMode="numeric"
@@ -181,6 +251,79 @@ export default function TradeForm() {
             <p className="subtle ticket-opt-hint">
               Leave this off to hold the position. You can sell any part of it later from{' '}
               <strong>Positions</strong>, or never — an open position is not a loose end.
+            </p>
+          )}
+        </div>
+      )}
+
+      {picked && (
+        <div className="flip-field wide ticket-preview">
+          {preview ? (
+            <dl className="prev-row">
+              <div>
+                <dt>{side === 'buy' ? 'Total cost' : 'Gross'}</dt>
+                <dd>
+                  <span className="num">{formatGp(preview.gross)}</span>
+                </dd>
+              </div>
+              {side === 'sell' && (
+                <>
+                  <div>
+                    <dt>GE tax</dt>
+                    <dd>
+                      <span className="num pl-down">−{formatGp(preview.tax)}</span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>You receive</dt>
+                    <dd>
+                      <span className="num">{formatGp(preview.net)}</span>
+                    </dd>
+                  </div>
+                </>
+              )}
+              {preview.pnl !== null && (
+                <div>
+                  <dt>P&amp;L vs your {context?.avgCost ? formatGp(Math.round(context.avgCost)) : ''} cost</dt>
+                  <dd>
+                    <span className={preview.pnl >= 0 ? 'num pl-up' : 'num pl-down'}>
+                      {formatGp(preview.pnl)}
+                    </span>
+                  </dd>
+                </div>
+              )}
+              {preview.roundTrip !== null && (
+                <div>
+                  <dt>Round trip, after tax</dt>
+                  <dd>
+                    <span className={preview.roundTrip >= 0 ? 'num pl-up' : 'num pl-down'}>
+                      {formatGp(preview.roundTrip)}
+                    </span>
+                  </dd>
+                </div>
+              )}
+            </dl>
+          ) : (
+            <p className="subtle">Enter a quantity and a price to price the order.</p>
+          )}
+
+          {context && (
+            <p className={overLimit ? 'error prev-limit' : 'subtle prev-limit'}>
+              {context.buyLimit === null
+                ? 'No buy limit published for this item.'
+                : overLimit
+                  ? `Over the four-hour limit — ${context.limitRemaining?.toLocaleString('en-US')} of ${context.buyLimit.toLocaleString('en-US')} left${
+                      formatResetIn(context.resetsInMs)
+                        ? `, resetting in ${formatResetIn(context.resetsInMs)}`
+                        : ''
+                    }. You can still record it; the game may not have let you buy it all at once.`
+                  : `${context.limitRemaining?.toLocaleString('en-US')} of ${context.buyLimit.toLocaleString('en-US')} left in the four-hour window${
+                      formatResetIn(context.resetsInMs)
+                        ? `, resetting in ${formatResetIn(context.resetsInMs)}`
+                        : ''
+                    }.`}
+              {context.quantity > 0 &&
+                ` You hold ${context.quantity.toLocaleString('en-US')} at ${formatGp(Math.round(context.avgCost ?? 0))} average.`}
             </p>
           )}
         </div>

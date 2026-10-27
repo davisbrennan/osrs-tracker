@@ -161,25 +161,42 @@ input.mini {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * The default button.
+ *
+ * This used to be `background: var(--ink-900); color: #fff`, inherited from
+ * the light theme this codebase was repurposed from. Under the dark palette
+ * --ink-900 resolves to the near-white text colour, so every button that did
+ * not override it was white text on cream — a measured contrast ratio of
+ * 1.17:1, against the 4.5:1 WCAG AA asks for. The sign-in button was one of
+ * them, which made the primary call to action on the public site all but
+ * invisible.
+ *
+ * Gold on near-black is the primary treatment the rest of the app already
+ * uses, so the default now matches it rather than fighting it.
+ */
 button {
   font: inherit;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   margin-top: var(--s-3);
   padding: 8px 16px;
-  border: 1px solid var(--ink-900);
+  border: 1px solid var(--gold);
   border-radius: var(--r-sm);
-  background: var(--ink-900);
-  color: #fff;
+  background: var(--gold);
+  color: #1c1409;
   cursor: pointer;
   align-self: flex-start;
   transition: background 0.15s ease;
 }
 button:hover:not(:disabled) {
-  background: var(--ink-700);
+  background: var(--gold-dim);
+  border-color: var(--gold-dim);
 }
 button:disabled {
-  opacity: 0.45;
+  background: var(--panel-2);
+  border-color: var(--rule);
+  color: var(--dim);
   cursor: default;
 }
 

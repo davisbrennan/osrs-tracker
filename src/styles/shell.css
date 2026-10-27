@@ -198,7 +198,9 @@ a:hover {
 .signout {
   background: none;
   border: 0;
-  color: var(--faint);
+  /* --faint measures 3.97:1 against the masthead, under the 4.5:1 AA asks
+     for. --dim clears it without making a secondary action shout. */
+  color: var(--dim);
   cursor: pointer;
   font: inherit;
   font-size: 12px;
@@ -255,4 +257,48 @@ h2 {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+}
+
+/* ------------------------------------------------------------------
+   Price feed freshness
+
+   Sits between the nav and the content: above the numbers it
+   qualifies, and out of the way of them. Quiet when healthy, which
+   is almost always — it exists to be noticed on the rare occasion
+   the poller has stopped and the page is quietly out of date.
+   ------------------------------------------------------------------ */
+.sync-strip {
+  align-items: center;
+  color: var(--dim);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-4);
+}
+.sync-strip strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.sync-dot {
+  background: var(--profit);
+  border-radius: 999px;
+  flex: none;
+  height: 7px;
+  width: 7px;
+}
+.sync-strip.overdue {
+  color: var(--loss);
+}
+.sync-strip.overdue .sync-dot {
+  background: var(--loss);
+}
+.sync-strip.overdue strong {
+  color: var(--loss);
+}
+.sync-note {
+  color: var(--dim);
+}
+.sync-strip.overdue .sync-note {
+  color: var(--loss);
 }

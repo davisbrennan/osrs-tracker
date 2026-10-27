@@ -138,8 +138,11 @@
   color: var(--conf-stale);
 }
 
+/* De-emphasised, not unreadable. --faint lands at 3.06:1 on the lighter
+   panels, which fails AA for body text; --dim clears it at 4.9:1 and still
+   reads as secondary. --faint stays for genuinely decorative marks. */
 .subtle {
-  color: var(--faint);
+  color: var(--dim);
   font-size: 12px;
 }
 
@@ -184,7 +187,12 @@
 
 .chips {
   display: flex;
+  /* Wraps because the item browser offers eight sorts, not the two this
+     started with. Without it the row runs off the side of a phone and
+     takes the whole page with it. */
+  flex-wrap: wrap;
   gap: var(--s-1);
+  min-width: 0;
 }
 .chips a {
   border: 1px solid var(--rule);
@@ -1120,8 +1128,10 @@ h2 .subtle {
   background: var(--panel-2);
   color: var(--text);
 }
+/* Same trap as .seg: a translucent wash over the --rule track composites
+   LIGHTER than the inactive tabs, dropping gold to 4.15:1. */
 .book-views a[aria-current] {
-  background: var(--gold-wash);
+  background: var(--bg);
   box-shadow: inset 0 -2px 0 var(--gold);
   color: var(--gold);
   font-weight: 600;
@@ -1219,4 +1229,573 @@ h2 .subtle {
 }
 .book-warn strong {
   color: var(--gold);
+}
+
+/* ------------------------------------------------------------------
+   Item page: what the thing is, before what it's worth
+   ------------------------------------------------------------------ */
+.item-head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  justify-content: space-between;
+}
+.item-head h1 {
+  margin: 0;
+}
+
+/* In-game flavour text. Quoted and italic so it reads as Jagex's voice
+   rather than as the page explaining itself. */
+.examine {
+  color: var(--dim);
+  font-style: italic;
+  margin: var(--s-2) 0 var(--s-5);
+}
+
+.about {
+  margin-bottom: var(--s-5);
+}
+/* Description left, facts in a rail on the right — the shape a research
+   page wants. Prose still gets a readable measure instead of running the
+   full width of a wide card, but the space beside it now carries the
+   numbers rather than sitting empty. */
+.about-body {
+  display: grid;
+  gap: var(--s-5);
+  /* The prose column is capped at a reading measure rather than left to
+     run the width of the card; the facts then take whatever is left, so
+     the space beside the text carries numbers instead of nothing. */
+  grid-template-columns: minmax(0, 64ch) minmax(0, 1fr);
+}
+.about-main {
+  min-width: 0;
+}
+.about-text {
+  margin: 0;
+  max-width: 72ch;
+}
+/* The CC BY-NC-SA attribution. Quiet, but never absent: the licence
+   requires it wherever the text it credits appears. */
+.about-credit {
+  color: var(--dim);
+  font-size: 12px;
+  margin: var(--s-3) 0 0;
+}
+.about-credit a {
+  color: var(--dim);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.about-credit a:hover {
+  color: var(--gold);
+}
+
+.facts {
+  align-content: start;
+  border-left: 1px solid var(--rule);
+  display: grid;
+  gap: var(--s-4) var(--s-5);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  padding-left: var(--s-5);
+}
+.facts dt {
+  color: var(--dim);
+  font-size: 12px;
+}
+.facts dd {
+  margin: 2px 0 0;
+}
+.alch-note {
+  margin: var(--s-3) 0 0;
+  max-width: 78ch;
+}
+
+/* The headline row is six across on the book; an item holds four. */
+.kpi-row.kpi-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.watch-btn {
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  color: var(--dim);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 13px;
+  gap: 6px;
+  padding: 7px 12px;
+}
+.watch-btn:hover {
+  border-color: var(--gold);
+  color: var(--text);
+}
+.watch-btn.on {
+  background: var(--gold-wash);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+@media (max-width: 760px) {
+  .about-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-4);
+  }
+  .facts {
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: var(--s-4) 0 0;
+  }
+  .kpi-row.kpi-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ------------------------------------------------------------------
+   Ticket preview
+
+   What the order does, before it is committed. Reads as a receipt
+   rather than as more form: no borders on the fields, figures
+   right-aligned under their labels.
+   ------------------------------------------------------------------ */
+.flip-field.ticket-preview {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  gap: var(--s-2);
+  grid-column: 1 / -1;
+  padding: var(--s-3);
+}
+.prev-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-5);
+  margin: 0;
+}
+.prev-row dt {
+  color: var(--dim);
+  font-size: 12px;
+}
+.prev-row dd {
+  font-size: 15px;
+  margin: 2px 0 0;
+}
+.prev-limit {
+  margin: 0;
+}
+
+/* ------------------------------------------------------------------
+   Watchlist / quote board
+   ------------------------------------------------------------------ */
+
+/* Visible to a screen reader, not on screen. Used where a control's
+   purpose is obvious by position but has no visible label. */
+.sr-only {
+  border: 0;
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.watch-add {
+  align-items: flex-start;
+}
+/* The picker is absolutely positioned against this, so it needs to be
+   the containing block and to sit above the table below it. */
+.watch-add-field {
+  flex: 1 1 320px;
+  max-width: 420px;
+  position: relative;
+}
+.watch-add-field input {
+  width: 100%;
+}
+
+/* ------------------------------------------------------------------
+   Money makers
+   ------------------------------------------------------------------ */
+
+/* Compact segmented filter. Smaller than .book-views, which navigates
+   between views; this one filters a single table. */
+.seg {
+  display: inline-flex;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  gap: 1px;
+  overflow: hidden;
+}
+.seg a {
+  background: var(--panel);
+  /* --dim reaches only 4.15:1 on --panel; these are navigation, not hints. */
+  color: var(--text-2);
+  font-size: 13px;
+  padding: 6px 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.seg a:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+/* The selected segment reads as inset rather than tinted.
+   --gold-wash is translucent, and the .seg track behind it is --rule, so the
+   wash composited to a LIGHTER surface than the unselected segments — gold
+   on it came to 4.15:1. Against --bg it is 8.6:1, and a recessed selected
+   segment is the more conventional reading anyway. */
+.seg a[aria-current] {
+  background: var(--bg);
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.mm-name {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+/* The recipe sits under the name rather than in a column of its own —
+   it is reference, not something you scan down. */
+.mm-recipe {
+  color: var(--dim);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  margin-top: 3px;
+  white-space: normal;
+}
+.mm-lock {
+  background: var(--loss-wash);
+  border-radius: var(--r-sm);
+  color: var(--loss);
+  font-size: 11px;
+  padding: 1px 6px;
+}
+.row-locked th[scope='row'] .mm-name {
+  opacity: 0.75;
+}
+
+/* What is holding a method back. Only the buy-limit case is coloured,
+   because it is the one people do not expect. */
+.cap {
+  font-size: 12px;
+}
+.cap-rate {
+  color: var(--dim);
+}
+.cap-buy-limit {
+  color: var(--gold);
+}
+.cap-cash {
+  color: var(--loss);
+}
+
+.mm-notes {
+  margin-top: var(--s-5);
+}
+.mm-notes ul {
+  margin: var(--s-3) 0;
+  padding-left: var(--s-4);
+}
+.mm-notes li {
+  margin-bottom: var(--s-2);
+  max-width: 82ch;
+}
+.mm-notes p {
+  max-width: 82ch;
+}
+
+/* ------------------------------------------------------------------
+   Item browser filters
+
+   A GET form in a disclosure. Open when something is set, so a
+   filtered view never reads as an empty catalogue, and closed by
+   default so the common case — search and go — stays one box.
+   ------------------------------------------------------------------ */
+.filters {
+  margin-bottom: var(--s-4);
+}
+.filter-top {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.filter-top input[type='search'] {
+  flex: 1 1 280px;
+  max-width: 420px;
+}
+.filter-clear {
+  color: var(--dim);
+  font-size: 13px;
+}
+.filter-clear:hover {
+  color: var(--gold);
+}
+
+.filter-more {
+  margin-top: var(--s-3);
+}
+.filter-more summary {
+  color: var(--dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  gap: var(--s-2);
+  list-style: none;
+  user-select: none;
+}
+.filter-more summary::-webkit-details-marker {
+  display: none;
+}
+/* A caret that turns, rather than the browser's default triangle. */
+.filter-more summary::before {
+  content: '▸';
+  display: inline-block;
+  transition: transform 0.12s ease;
+}
+.filter-more[open] summary::before {
+  transform: rotate(90deg);
+}
+.filter-more summary:hover {
+  color: var(--text);
+}
+.filter-count {
+  background: var(--gold-wash);
+  border-radius: 999px;
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 7px;
+}
+
+.filter-grid {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  display: grid;
+  gap: var(--s-5);
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  margin-top: var(--s-3);
+  padding: var(--s-4);
+}
+.filter-grid fieldset {
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+.filter-grid legend {
+  color: var(--gold);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 0 0 var(--s-2);
+  text-transform: uppercase;
+}
+.filter-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.filter-grid label > span {
+  color: var(--dim);
+  font-size: 12px;
+}
+.filter-grid input,
+.filter-grid select {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  width: 100%;
+}
+.filter-hint {
+  color: var(--dim);
+  font-size: 11px;
+  margin: 0;
+}
+
+/* Scoped to beat `.filter-grid fieldset`, which is one class plus an
+   element and so out-specifies a bare `.filter-checks`. Without this the
+   fieldset keeps `display: flex` and the checks stack in a column with the
+   rest of the row empty beside them. */
+.filter-grid .filter-checks {
+  display: grid;
+  gap: var(--s-3) var(--s-5);
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.filter-grid .filter-checks legend {
+  grid-column: 1 / -1;
+}
+.filter-check {
+  align-items: start;
+  cursor: pointer;
+  display: grid !important;
+  gap: var(--s-2);
+  grid-template-columns: auto 1fr;
+}
+.filter-check input {
+  accent-color: var(--gold);
+  cursor: pointer;
+  height: 14px;
+  margin-top: 2px;
+  width: 14px !important;
+}
+.filter-check > span {
+  color: var(--text);
+  font-size: 13px;
+}
+.filter-check .subtle {
+  color: var(--dim);
+  display: block;
+  font-size: 11px;
+}
+
+.filter-actions {
+  align-items: center;
+  display: flex;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+}
+
+/* What is currently narrowing the list, each one removable on its own.
+   Without these a filtered view is indistinguishable from a short
+   catalogue, which is how people conclude the data is missing. */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  list-style: none;
+  margin: 0 0 var(--s-4);
+  padding: 0;
+}
+.chip-row a {
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--text);
+  display: inline-block;
+  font-size: 12px;
+  padding: 3px 10px;
+  text-decoration: none;
+}
+.chip-row a:hover {
+  border-color: var(--loss);
+  color: var(--loss);
+}
+
+.alch-tag {
+  background: var(--gold-wash);
+  border-radius: var(--r-sm);
+  color: var(--gold);
+  font-size: 11px;
+  margin-left: var(--s-2);
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------
+   Against its own history
+
+   Four readings, each a plain-English verdict with the number that
+   produced it underneath. The verdict leads because "far above
+   normal" is actionable and "93rd percentile" needs translating.
+   ------------------------------------------------------------------ */
+.ctx-grid {
+  display: grid;
+  gap: var(--s-5);
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+.ctx dt {
+  color: var(--dim);
+  font-size: 12px;
+}
+.ctx dd {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 2px 0 3px;
+}
+.ctx > .subtle {
+  display: block;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* Where today sits across the period. A bar reads faster than a
+   number, and makes "near the bottom of its range" obvious. */
+.gauge {
+  margin-top: var(--s-3);
+}
+.gauge-track {
+  background: linear-gradient(90deg, var(--rule), var(--panel-2), var(--rule));
+  border-radius: 999px;
+  height: 4px;
+  position: relative;
+}
+.gauge-mark {
+  background: var(--gold);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px var(--panel);
+  height: 10px;
+  margin-left: -3px;
+  position: absolute;
+  top: -3px;
+  width: 6px;
+}
+.gauge-label {
+  color: var(--dim);
+  font-size: 11px;
+  margin: 6px 0 0;
+}
+.ctx-note {
+  border-top: 1px solid var(--rule);
+  margin: var(--s-5) 0 0;
+  max-width: 88ch;
+  padding-top: var(--s-3);
+}
+
+/* ------------------------------------------------------------------
+   Price age
+
+   Each side of the book carries its own, because they are often
+   hours apart and that gap is the useful part — a fresh buy price
+   beside a stale sell price means you can get in but not out.
+   ------------------------------------------------------------------ */
+.age {
+  color: var(--dim);
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  margin-top: 1px;
+}
+/* When our own poll is late rather than the market being quiet. */
+.refreshed {
+  margin-top: var(--s-2);
+}
+
+/* Watch and Alert sit together in the item head. */
+.item-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.item-actions .watch-btn {
+  text-decoration: none;
 }

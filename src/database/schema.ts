@@ -8,7 +8,9 @@ import {
   integer,
   bigint,
   bigserial,
+  date,
   primaryKey,
+  index,
 } from 'drizzle-orm/pg-core';
 
 // ---------- Better Auth core ----------
@@ -222,6 +224,8 @@ export const osrsAlerts = pgTable('osrs_alerts', {
   itemId: integer('item_id')
     .notNull()
     .references(() => osrsItems.id, { onDelete: 'cascade' }),
+  /** price | margin | unusual. See drizzle/0005 for what threshold means. */
+  kind: text('kind').notNull().default('price'),
   direction: text('direction').notNull(),
   threshold: bigint('threshold', { mode: 'number' }).notNull(),
   priceSide: text('price_side').notNull().default('low'),
@@ -284,3 +288,77 @@ export const osrsTrades = pgTable('osrs_trades', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * One price bar per item per day.
+ *
+ * Statistics are computed from these and nothing else, because they are the
+ * only uniform series available: hourly points going forward, and coarser
+ * history backfilled from the wiki, both roll into here. See
+ * lib/osrs/stats.ts for why uniformity matters.
+ */
+export const osrsPriceDaily = pgTable(
+  'osrs_price_daily',
+  {
+    itemId: integer('item_id')
+      .notNull()
+      .references(() => osrsItems.id, { onDelete: 'cascade' }),
+    /** Midnight UTC, stored as a date so a day cannot be recorded twice. */
+    day: date('day').notNull(),
+    avgHigh: integer('avg_high'),
+    avgLow: integer('avg_low'),
+    /** Both sides summed. */
+    volume: bigint('volume', { mode: 'number' }).notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.itemId, t.day] })]
+);
+
+/**
+ * Item descriptions cached from the OSRS Wiki.
+ *
+ * Separate from osrs_items because the source, cadence and LICENCE all
+ * differ: this is CC BY-NC-SA 3.0 prose that must be shown with its
+ * attribution, while osrs_items is game data from the prices mapping
+ * endpoint. See lib/osrs/wiki.ts before displaying any of it.
+ */
+export const osrsItemWiki = pgTable('osrs_item_wiki', {
+  itemId: integer('item_id')
+    .primaryKey()
+    .references(() => osrsItems.id, { onDelete: 'cascade' }),
+  title: text('title'),
+  pageId: integer('page_id'),
+  /** A verbatim prefix of the article's lead section. Never rewritten. */
+  summary: text('summary'),
+  /** The article URL. This IS the attribution; it travels with the text. */
+  url: text('url'),
+  /** True when no article matches this item's name. Stops us re-asking. */
+  missing: boolean('missing').notNull().default(false),
+  fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Every background job run, recorded as it happens.
+ *
+ * Written by the worker rather than by the jobs themselves, so a job that
+ * throws before its first statement is still recorded as having been
+ * attempted. See drizzle/0006_job_runs.sql for why inferring this from the
+ * tables the jobs write is not good enough.
+ */
+export const osrsJobRuns = pgTable(
+  'osrs_job_runs',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    job: text('job').notNull(),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    /** running | ok | failed | skipped */
+    status: text('status').notNull().default('running'),
+    /** The job's own return value, verbatim. */
+    result: jsonb('result'),
+    /** Message only, never a stack trace. */
+    error: text('error'),
+    durationMs: integer('duration_ms'),
+  },
+  (t) => [index('osrs_job_runs_job_started_idx').on(t.job, t.startedAt.desc())]
+);

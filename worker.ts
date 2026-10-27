@@ -15,6 +15,7 @@
 import { Worker, Queue, type Job } from 'bullmq';
 import IORedis from 'ioredis';
 import { JOBS, isJobName, type JobName } from '@/lib/osrs/jobs';
+import { recordRun, recordSkip } from '@/lib/osrs/jobs/record';
 
 const connection = new IORedis(process.env.REDIS_URL || 'redis://cache:6379', {
   maxRetriesPerRequest: null,
@@ -47,12 +48,19 @@ const running = new Set<JobName>();
 async function runJob(name: JobName) {
   if (running.has(name)) {
     console.warn(`[worker] ${name} is still running — skipping this tick`);
-    return { skipped: true, reason: 'previous run still in progress' };
+    const reason = 'previous run still in progress';
+    // Recorded, not just logged. A job skipping every tick because the
+    // previous one never finishes is a hang, and it is indistinguishable
+    // from a healthy job unless the skips are written down somewhere.
+    await recordSkip(name, reason);
+    return { skipped: true, reason };
   }
   running.add(name);
   const startedAt = Date.now();
   try {
-    const result = await JOBS[name].run();
+    // recordRun re-throws, so BullMQ's retry and the 'failed' handler below
+    // behave exactly as they did before this wrapper existed.
+    const result = await recordRun(name, () => JOBS[name].run());
     const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
     console.log(`[worker] ${name} ok in ${seconds}s`, JSON.stringify(result));
     return result;

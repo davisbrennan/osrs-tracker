@@ -5,10 +5,13 @@ import { db } from '@/database';
 import { osrsItems, osrsPrices } from '@/database/schema';
 import { evaluate, formatGp, type Opportunity } from '@/lib/osrs/ge';
 import { currentUser, cashStackFor } from '@/lib/session';
+import { SITE } from '@/lib/site';
+import { collectionSchema, jsonLdProps, SCHEMA_ITEMS } from '@/lib/structured-data';
 import AppShell from '@/components/app-shell';
 import FlipTable, { type SortKey } from './flip-table';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/flips' },
   title: 'Flip finder',
   description:
     'Live Grand Exchange margins after tax, capped by buy limits and what your cash stack can actually fund.',
@@ -134,8 +137,29 @@ export default async function FlipFinder({ searchParams }: { searchParams: Promi
     return `/flips?${params.toString()}`;
   };
 
+  // Only the default view gets marked up. Every filtered view canonicalises
+  // to /flips, so describing a search result here would hand a crawler
+  // structured data that does not match the page it was pointed at.
+  const isDefaultView = !search && !everything && !membersOnly && current === 1;
+
   return (
     <AppShell current="flips" signedIn={Boolean(user)} cashStack={cashStack}>
+      {isDefaultView && visible.length > 0 && (
+        <script
+          {...jsonLdProps(
+            collectionSchema({
+              name: 'OSRS flip finder — live Grand Exchange margins after tax',
+              description:
+                'Old School RuneScape items ranked by profit per four-hour buy limit window, after the 2% Grand Exchange sale tax.',
+              path: '/flips',
+              items: visible.slice(0, SCHEMA_ITEMS).map((o) => ({
+                name: o.name,
+                url: `${SITE.url}/item/${o.itemId}`,
+              })),
+            })
+          )}
+        />
+      )}
       <h1>Flip finder</h1>
       <p className="lede">
         Margins are after the 2% sale tax, and profit is capped by whichever bites first — the

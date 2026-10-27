@@ -4,9 +4,10 @@ import { revalidatePath } from 'next/cache';
 import { eq, and, sql, desc, inArray } from 'drizzle-orm';
 import { db } from '@/database';
 import { osrsTrades, osrsItems, osrsPrices } from '@/database/schema';
-import { requireUser } from '@/lib/session';
+import { requireUser, currentUser } from '@/lib/session';
 import { geTax, parseGp } from '@/lib/osrs/ge';
-import type { Trade } from '@/lib/osrs/portfolio';
+import { buildPortfolio, type Trade } from '@/lib/osrs/portfolio';
+import { limitStatus } from '@/lib/osrs/limits';
 
 export type ActionResult = { ok: true; message: string } | { ok: false; error: string };
 
@@ -212,6 +213,97 @@ export async function allTrades(userId: string): Promise<Trade[]> {
     .from(osrsTrades)
     .innerJoin(osrsItems, eq(osrsItems.id, osrsTrades.itemId))
     .where(eq(osrsTrades.userId, userId))
+    .orderBy(desc(osrsTrades.executedAt));
+
+  return rows.map((r) => ({ ...r, side: r.side as 'buy' | 'sell' }));
+}
+
+export type ItemContext = {
+  itemId: number;
+  /** Units currently open, and what they cost on average. */
+  quantity: number;
+  avgCost: number | null;
+  /** Published cap per four-hour window; null when the wiki publishes none. */
+  buyLimit: number | null;
+  limitUsed: number;
+  limitRemaining: number | null;
+  /** Milliseconds until the open window resets; null when none is open. */
+  resetsInMs: number | null;
+};
+
+/**
+ * What the ticket needs to price an order before it is submitted.
+ *
+ * Fetched when an item is picked rather than pushed into the form for every
+ * item up front — the picker can reach any of ~4,000 items, and almost all
+ * of them are ones this user has never touched.
+ */
+export async function itemContext(itemId: number): Promise<ItemContext | null> {
+  const user = await currentUser();
+  if (!user || !Number.isInteger(itemId)) return null;
+
+  const [limitRow] = await db
+    .select({ buyLimit: osrsItems.buyLimit })
+    .from(osrsItems)
+    .where(eq(osrsItems.id, itemId))
+    .limit(1);
+  if (!limitRow) return null;
+
+  const trades = await tradesForItem(user.id, itemId);
+  const position = buildPortfolio(trades, new Map()).positions.find((p) => p.itemId === itemId);
+  const limit = limitStatus(itemId, limitRow.buyLimit, trades);
+
+  return {
+    itemId,
+    quantity: position?.quantity ?? 0,
+    avgCost: position ? position.avgCost : null,
+    buyLimit: limit.limit,
+    limitUsed: limit.used,
+    limitRemaining: limit.remaining,
+    resetsInMs: limit.resetsInMs,
+  };
+}
+
+/** One item with its current quote, for prefilling a form from a link. */
+export async function itemById(id: number): Promise<ItemMatch | null> {
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const [row] = await db
+    .select({
+      id: osrsItems.id,
+      name: osrsItems.name,
+      members: osrsItems.members,
+      low: osrsPrices.low,
+      high: osrsPrices.high,
+    })
+    .from(osrsItems)
+    .leftJoin(osrsPrices, eq(osrsPrices.itemId, osrsItems.id))
+    .where(eq(osrsItems.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * One item's fills for one user, newest first.
+ *
+ * Scoped rather than filtering allTrades in memory: an item page should not
+ * get slower because someone has a long blotter in unrelated items.
+ */
+export async function tradesForItem(userId: string, itemId: number): Promise<Trade[]> {
+  const rows = await db
+    .select({
+      id: osrsTrades.id,
+      itemId: osrsTrades.itemId,
+      itemName: osrsItems.name,
+      side: osrsTrades.side,
+      quantity: osrsTrades.quantity,
+      price: osrsTrades.price,
+      executedAt: osrsTrades.executedAt,
+      taxPaid: osrsTrades.taxPaid,
+      note: osrsTrades.note,
+    })
+    .from(osrsTrades)
+    .innerJoin(osrsItems, eq(osrsItems.id, osrsTrades.itemId))
+    .where(and(eq(osrsTrades.userId, userId), eq(osrsTrades.itemId, itemId)))
     .orderBy(desc(osrsTrades.executedAt));
 
   return rows.map((r) => ({ ...r, side: r.side as 'buy' | 'sell' }));

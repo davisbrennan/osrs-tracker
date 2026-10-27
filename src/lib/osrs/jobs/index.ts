@@ -10,9 +10,20 @@ import { syncItems } from '@/lib/osrs/jobs/sync-items';
 import { syncPrices, pruneHistory } from '@/lib/osrs/jobs/sync-prices';
 import { syncHiscores } from '@/lib/osrs/jobs/sync-hiscores';
 import { checkAlerts } from '@/lib/osrs/jobs/check-alerts';
+import { syncWiki } from '@/lib/osrs/jobs/sync-wiki';
+import { rollupDaily, pruneDaily } from '@/lib/osrs/jobs/rollup-daily';
+import { backfillHistory } from '@/lib/osrs/jobs/backfill-history';
+import { pruneJobRuns } from '@/lib/osrs/jobs/record';
 import type { JobResult } from '@/lib/osrs/jobs/util';
 
-export type JobName = 'sync-items' | 'sync-prices' | 'sync-hiscores' | 'prune-history';
+export type JobName =
+  | 'sync-items'
+  | 'sync-prices'
+  | 'sync-hiscores'
+  | 'prune-history'
+  | 'sync-wiki'
+  | 'rollup-daily'
+  | 'backfill-history';
 
 export type JobDefinition = {
   /** How often to run it, in milliseconds. */
@@ -61,11 +72,44 @@ export const JOBS: Record<JobName, JobDefinition> = {
     run: () => syncHiscores(),
   },
 
+  // A trickle, not a sweep. Each run takes a small budgeted slice, so the
+  // catalogue fills in over days and then there is nothing left to do.
+  // Descriptions change about as often as the game's lore does.
+  'sync-wiki': {
+    everyMs: 30 * MINUTE,
+    initialDelayMs: 3 * MINUTE,
+    description: 'Fetch item descriptions from the wiki for items that lack one.',
+    run: () => syncWiki(),
+  },
+
+  // Free: it reads hourly points already collected. Hourly so today's bar
+  // is never far out of date, which is what the statistics compare against.
+  'rollup-daily': {
+    everyMs: HOUR,
+    initialDelayMs: 90_000,
+    description: 'Roll hourly price points into daily bars.',
+    run: () => rollupDaily(),
+  },
+
+  // A trickle. Fetches the history we were not running to collect, busiest
+  // items first, so the statistics have something to say before the site has
+  // been up for a month.
+  'backfill-history': {
+    everyMs: 20 * MINUTE,
+    initialDelayMs: 4 * MINUTE,
+    description: 'Fetch past daily prices for items short of history.',
+    run: () => backfillHistory(),
+  },
+
   'prune-history': {
     everyMs: 24 * HOUR,
     initialDelayMs: 5 * MINUTE,
     description: 'Drop price history past the retention window.',
-    run: pruneHistory,
+    run: async () => ({
+      hourly: await pruneHistory(),
+      daily: await pruneDaily(),
+      jobRuns: await pruneJobRuns(),
+    }),
   },
 };
 
@@ -73,4 +117,15 @@ export function isJobName(name: string): name is JobName {
   return Object.prototype.hasOwnProperty.call(JOBS, name);
 }
 
-export { syncItems, syncPrices, syncHiscores, checkAlerts, pruneHistory };
+export {
+  syncItems,
+  syncPrices,
+  syncHiscores,
+  checkAlerts,
+  pruneHistory,
+  syncWiki,
+  rollupDaily,
+  pruneDaily,
+  backfillHistory,
+  pruneJobRuns,
+};

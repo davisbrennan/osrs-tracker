@@ -500,6 +500,34 @@ eq('only two picked up', budgeted.due, 2);
 
 // =================================================================== wrap up
 
+section('reading rows out of a raw db.execute');
+{
+  // This is a REGRESSION TEST, not a unit test. `db.execute` returns a pg
+  // Result that is neither an array nor iterable, so `Array.from()` on it
+  // returns [] without complaining. Two jobs shipped reading their work
+  // queue that way: the query found rows, the job saw none, and it reported
+  // success having done nothing.
+  //
+  // Asserted against the real driver rather than a fixture, because the
+  // thing that would reintroduce this is a driver upgrade changing shape.
+  const { rowsOf } = await import('@/database');
+  const { sql: rawSql } = await import('drizzle-orm');
+
+  const result = await db.execute(rawSql`SELECT 1 AS n UNION ALL SELECT 2`);
+  eq('rowsOf reads both rows', rowsOf<{ n: number }>(result).length, 2);
+  eq('and their values', rowsOf<{ n: number }>(result).map((r) => Number(r.n)), [1, 2]);
+  eq(
+    'while Array.from silently sees none — the bug this guards',
+    Array.from(result as never).length,
+    0
+  );
+
+  eq('an empty result is empty, not a throw', rowsOf(await db.execute(rawSql`SELECT 1 WHERE false`)).length, 0);
+  eq('a plain array passes through', rowsOf([{ n: 9 }]).length, 1);
+  eq('null is empty', rowsOf(null).length, 0);
+  eq('a primitive is empty', rowsOf(42).length, 0);
+}
+
 section('the wedding tables are still intact');
 eq('users table still readable', (await db.select().from(users)).length >= 1, true);
 

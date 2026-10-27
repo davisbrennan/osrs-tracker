@@ -18,6 +18,22 @@ export const SITE = {
 } as const;
 
 /**
+ * The social card.
+ *
+ * Next serves `app/opengraph-image.png` at this path and attaches it to every
+ * page automatically — but ONLY to pages that do not declare an `openGraph`
+ * block of their own. Declaring one replaces the inherited object entirely,
+ * image included, which is how item pages silently lost their card. Any page
+ * that sets `openGraph` has to spread this back in.
+ */
+export const SOCIAL_CARD = {
+  url: '/opengraph-image.png',
+  width: 1200,
+  height: 630,
+  alt: 'RSpill — a worked Grand Exchange flip showing the sale tax taken off the spread.',
+} as const;
+
+/**
  * The signed-in navigation.
  *
  * `public: true` means the page works without an account, which is how the
@@ -27,11 +43,23 @@ export const SITE = {
 export const NAV = [
   { href: '/flips', label: 'Flip finder', key: 'flips', public: true },
   { href: '/items', label: 'Items', key: 'items', public: true },
+  { href: '/unusual', label: 'Unusual', key: 'unusual', public: true },
+  { href: '/money', label: 'Money makers', key: 'money', public: true },
+  { href: '/watchlist', label: 'Watchlist', key: 'watchlist', public: false },
+  { href: '/alerts', label: 'Alerts', key: 'alerts', public: false },
   { href: '/accounts', label: 'Accounts', key: 'accounts', public: false },
   { href: '/journal', label: 'Book', key: 'journal', public: false },
 ] as const;
 
-export type NavKey = (typeof NAV)[number]['key'] | 'settings' | 'admin';
+/**
+ * `home` is not a nav entry.
+ *
+ * The landing page used to pass `flips`, which lit up the flip finder in the
+ * nav while you were not on it, and opted the page into the price-freshness
+ * strip — a red "prices are 2 hours old" warning as the first thing a new
+ * visitor sees. It is its own thing, so it gets its own key.
+ */
+export type NavKey = (typeof NAV)[number]['key'] | 'home' | 'settings' | 'admin';
 
 /** The three things the landing page leads with. */
 export const FEATURES = [
@@ -84,4 +112,20 @@ export const FAQS = [
 ] as const;
 
 /** Paths that must never be indexed: anything behind sign-in, plus the API. */
-export const NOINDEX_PATHS = ['/admin', '/settings', '/signin', '/api/'] as const;
+/**
+ * Kept out of search results.
+ *
+ * Each of these pages also sets `robots: { index: false }` in its own
+ * metadata; this is the belt to that's braces, and it covers the case where
+ * a crawler reads robots.txt and never fetches the page at all.
+ */
+export const NOINDEX_PATHS = [
+  '/admin',
+  '/settings',
+  '/signin',
+  '/api/',
+  '/journal',
+  '/watchlist',
+  '/alerts',
+  '/accounts',
+] as const;

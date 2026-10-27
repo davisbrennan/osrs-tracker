@@ -2,8 +2,10 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { LEGAL } from '@/lib/legal';
 import { SITE } from '@/lib/site';
+import { WIKI_LICENCE } from '@/lib/osrs/wiki';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/terms' },
   title: 'Terms',
   description: `The terms of using ${SITE.name}.`,
 };
@@ -32,6 +34,23 @@ export default function Terms() {
         The tax rules, buy limits and experience curves are implemented from public documentation
         and checked against more than one source, but Jagex changes the game and this site can be
         wrong or out of date. If a number here disagrees with the game, the game is right.
+      </p>
+
+      <h2>Item descriptions come from the OSRS Wiki</h2>
+      <p>
+        Where an item page carries a description, that text is taken from the Old School RuneScape
+        Wiki and is used under{' '}
+        <a href={WIKI_LICENCE.url} target="_blank" rel="noopener noreferrer nofollow">
+          {WIKI_LICENCE.name}
+        </a>
+        . Each description links to the article it came from, which is the attribution that licence
+        requires. The licence is a non-commercial one, which suits this site: it is a hobby project
+        and is not run for profit.
+      </p>
+      <p>
+        Everything else — prices, buy limits, examine text and hiscores — is game data from
+        Jagex&rsquo;s own endpoints and the wiki&rsquo;s price API, and is not covered by that
+        licence.
       </p>
 
       <h2>No affiliation with Jagex</h2>

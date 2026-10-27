@@ -32,7 +32,9 @@ export function gpClass(amount: number): string {
  * form (1.25M) used in tables.
  */
 export function gpExact(amount: number): string {
-  return `${Math.round(amount).toLocaleString('en-US')}`;
+  // `+ 0` collapses negative zero. A margin of -23,240 on 0 affordable units
+  // is -0 in JavaScript, and "-0 gp" reads as a bug rather than as nothing.
+  return `${(Math.round(amount) + 0).toLocaleString('en-US')}`;
 }
 
 /** Profit and loss get their own colour, which outranks the stack bands. */

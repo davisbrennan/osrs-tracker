@@ -5,6 +5,7 @@ import { SITE } from '@/lib/site';
 import { HISTORY_RETENTION_DAYS } from '@/lib/osrs/jobs/sync-prices';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/privacy' },
   title: 'Privacy',
   description: `What ${SITE.name} stores, what it does not, and who else touches it.`,
 };

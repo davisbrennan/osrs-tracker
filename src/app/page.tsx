@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { eq, and, isNotNull, desc, sql } from 'drizzle-orm';
 import { db } from '@/database';
 import { osrsItems, osrsPrices } from '@/database/schema';
@@ -12,9 +13,24 @@ import {
 } from '@/lib/osrs/ge';
 import { currentUser, cashStackFor } from '@/lib/session';
 import { gpExact } from '@/lib/gp';
+import { unusualCandidates } from '@/app/actions/history';
+import { lastPriceSync } from '@/lib/osrs/last-sync';
+import { ago } from '@/lib/gp';
+import { websiteSchema, faqSchema, jsonLdProps } from '@/lib/structured-data';
 import AppShell from '@/components/app-shell';
 
 export const revalidate = 300;
+
+/**
+ * The root layout supplies the title, description and social card. All this
+ * adds is the canonical, which the layout cannot: `metadataBase` resolves
+ * relative URLs but does not declare one, so without this the home page was
+ * the only public page with no canonical at all — and it is the page most
+ * likely to be linked with a tracking parameter stuck on the end.
+ */
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
 
 /**
  * The hero is a real flip, not a headline.
@@ -81,15 +97,88 @@ async function heroFlip() {
   };
 }
 
+/**
+ * The state of the market, in three numbers.
+ *
+ * A landing page that only describes itself asks to be taken on trust. This
+ * one is measuring four thousand items every five minutes, and saying so
+ * with today's actual figures is both the proof and the most characteristic
+ * thing about the subject — a market summary is what a market tool should
+ * open with.
+ *
+ * Every row links to its item page, which is also where the search traffic
+ * is meant to land.
+ */
+async function marketPulse() {
+  const priced = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(osrsPrices)
+    .where(and(isNotNull(osrsPrices.low), isNotNull(osrsPrices.high)));
+
+  const liquid = await db
+    .select({
+      itemId: osrsItems.id,
+      name: osrsItems.name,
+      low: osrsPrices.low,
+      high: osrsPrices.high,
+      volume: osrsPrices.hourlyVolume,
+    })
+    .from(osrsPrices)
+    .innerJoin(osrsItems, eq(osrsItems.id, osrsPrices.itemId))
+    .where(
+      and(
+        isNotNull(osrsPrices.low),
+        isNotNull(osrsPrices.high),
+        sql`${osrsPrices.hourlyVolume} >= 500`
+      )
+    )
+    .orderBy(desc(osrsPrices.hourlyVolume))
+    .limit(200);
+
+  const usable = liquid.filter(
+    (r): r is typeof r & { low: number; high: number } => r.low !== null && r.high !== null
+  );
+
+  const widest = usable
+    .map((r) => ({ ...r, margin: marginPerUnit(r.low, r.high, r.itemId) }))
+    .sort((a, b) => b.margin - a.margin)[0];
+
+  const busiest = usable[0];
+
+  // Limited to the busiest slice: this runs on every landing-page render and
+  // the full Unusual screen's work is not worth it for one headline figure.
+  const unusual = (await unusualCandidates(2000, 60).catch(() => []))
+    .filter(
+      (c) =>
+        c.context.enough &&
+        (c.context.spreadPercentile ?? 0) >= 90 &&
+        marginPerUnit(c.low, c.high, c.id) > 0
+    )
+    .sort((a, b) => (b.context.spreadPercentile ?? 0) - (a.context.spreadPercentile ?? 0))[0];
+
+  return {
+    tracked: priced[0]?.n ?? 0,
+    widest: widest && widest.margin > 0 ? widest : null,
+    busiest: busiest ?? null,
+    unusual: unusual ?? null,
+  };
+}
+
 export default async function Landing() {
   const user = await currentUser();
-  const [cashStack, flip] = await Promise.all([
+  const [cashStack, flip, pulse, sync] = await Promise.all([
     cashStackFor(user?.id ?? null),
     heroFlip().catch(() => null),
+    marketPulse().catch(() => null),
+    lastPriceSync().catch(() => null),
   ]);
 
   return (
-    <AppShell current="flips" signedIn={Boolean(user)} cashStack={cashStack}>
+    <AppShell current="home" signedIn={Boolean(user)} cashStack={cashStack}>
+      {/* The questions below are ones people type into a search bar, so they
+          are marked up to be answerable directly from the results. */}
+      <script {...jsonLdProps([websiteSchema(), faqSchema([...FAQS])])} />
+
       <section className="hero">
         <div className="hero-copy">
           <h1 className="hero-title">
@@ -160,6 +249,73 @@ export default async function Landing() {
           </div>
         )}
       </section>
+
+      {pulse && pulse.tracked > 0 && (
+        <section className="pulse" aria-label="The market right now">
+          <p className="pulse-lead">
+            Watching <strong>{pulse.tracked.toLocaleString('en-US')}</strong> priced items
+            {sync?.minutesAgo != null && (
+              <>
+                , last checked <strong>{ago(sync.minutesAgo)}</strong>
+                {sync.minutesAgo >= 1 ? ' ago' : ''}
+              </>
+            )}
+            .
+          </p>
+
+          <div className="pulse-grid">
+            {pulse.widest && (
+              <div className="pulse-cell">
+                <p className="pulse-label">Widest margin</p>
+                <p className="pulse-figure pl-up">+{gpExact(pulse.widest.margin)}</p>
+                <p className="pulse-item">
+                  <Link href={`/item/${pulse.widest.itemId}`}>{pulse.widest.name}</Link>
+                  <span className="subtle"> per unit, after tax</span>
+                </p>
+              </div>
+            )}
+
+            {pulse.busiest && (
+              <div className="pulse-cell">
+                <p className="pulse-label">Busiest</p>
+                <p className="pulse-figure">
+                  {formatGp(pulse.busiest.volume ?? 0).replace(/gp$/i, '')}
+                </p>
+                <p className="pulse-item">
+                  <Link href={`/item/${pulse.busiest.itemId}`}>{pulse.busiest.name}</Link>
+                  <span className="subtle"> traded in the last hour</span>
+                </p>
+              </div>
+            )}
+
+            {pulse.unusual ? (
+              <div className="pulse-cell">
+                <p className="pulse-label">Unusual today</p>
+                <p className="pulse-figure">
+                  {pulse.unusual.context.currentSpreadPct?.toFixed(1)}%
+                </p>
+                <p className="pulse-item">
+                  <Link href={`/item/${pulse.unusual.id}`}>{pulse.unusual.name}</Link>
+                  <span className="subtle">
+                    {' '}
+                    against its usual {pulse.unusual.context.medianSpreadPct?.toFixed(1)}%
+                  </span>
+                </p>
+              </div>
+            ) : (
+              <div className="pulse-cell">
+                <p className="pulse-label">Unusual today</p>
+                <p className="pulse-figure quiet">Nothing</p>
+                <p className="pulse-item">
+                  <span className="subtle">
+                    No item is trading far outside its own range. Most days look like this.
+                  </span>
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="rows">
         {FEATURES.map((f) => (

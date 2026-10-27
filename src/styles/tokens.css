@@ -32,7 +32,9 @@
   --gold-wash: rgba(232, 174, 60, 0.12);
 
   --profit: #6ed07a;
-  --loss: #e46259;
+  /* Lightened from #e46259, which reached only 4.49:1 on the lighter panels
+     — just under AA, and a loss figure is a number people need to read. */
+  --loss: #f36e65;
   --loss-wash: rgba(228, 98, 89, 0.14);
 
   /* ------------------------------------------------------------
