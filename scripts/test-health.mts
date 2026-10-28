@@ -23,11 +23,13 @@ const {
   lateAfterMs,
   humanMs,
   percent,
+  summariseResult,
   LATE_FLOOR_MS,
 } = await import('@/lib/osrs/health');
 const { JOBS } = await import('@/lib/osrs/jobs');
 const { errorMessage } = await import('@/lib/osrs/jobs/record');
 const { MIN_SAMPLE_DAYS } = await import('@/lib/osrs/stats');
+const { safeInt, safeDate, INT4_MAX, INT4_MIN } = await import('@/lib/osrs/jobs/util');
 
 type Check = { id: string; title: string; status: string; detail: string; fix?: string; command?: string };
 type JobRun = {
@@ -38,6 +40,8 @@ type JobRun = {
   error: string | null;
   durationMs: number | null;
   result: unknown;
+  failingSince?: Date | null;
+  consecutiveFailures?: number;
 };
 
 let fail = 0;
@@ -71,6 +75,33 @@ const run = (over: Partial<JobRun> = {}): JobRun => ({
   ...over,
 });
 
+console.log('\nNot yet due is not the same as never run');
+{
+  // The run log starts empty on the release that introduces it, so a job on
+  // a 24-hour cadence has nothing in it for a day. Grading that as broken
+  // made three of the six red lines on the first real deploy false alarms
+  // of this page's own making.
+  const HOUR = 3_600_000;
+  const young = gradeJob('sync-items', undefined, NOW, HOUR) as Check;
+  eq('24h job, 1h-old log → unknown, not fail', young.status, 'unknown');
+  ok('says it has not come round yet', young.detail.includes('only been collecting'), young.detail);
+  ok('and offers no alarming command', young.command === undefined);
+
+  // Once the log is older than the cadence, silence IS evidence.
+  const overdue = gradeJob('sync-items', undefined, NOW, 30 * HOUR) as Check;
+  eq('24h job, 30h-old log → fail', overdue.status, 'fail');
+  ok('and says why that is now conclusive', overdue.detail.includes('longer than its'), overdue.detail);
+
+  // The 5-minute poller gets no such grace after an hour.
+  const poller = gradeJob('sync-prices', undefined, NOW, HOUR) as Check;
+  eq('5m job, 1h-old log → fail', poller.status, 'fail');
+
+  // With no log at all there is nothing to reason from, so the old
+  // behaviour stands.
+  const noLog = gradeJob('sync-items', undefined, NOW, null) as Check;
+  eq('no log at all → fail', noLog.status, 'fail');
+}
+
 console.log('\nNever run is not the same as nothing to do');
 {
   // The whole point. Both of these jobs have written nothing; only one of
@@ -99,6 +130,43 @@ console.log('\nA failed run reports its own message');
   eq('failed → fail', c.status, 'fail');
   ok('the message is in the detail', c.detail.includes('ENOTFOUND'), c.detail);
   ok('the command greps for that job', (c.command ?? '').includes('sync-prices'), c.command);
+}
+
+console.log('\nA repeated failure is reported differently from a first one');
+{
+  const once = gradeJob(
+    'sync-prices',
+    run({ status: 'failed', error: 'value out of range [22003]', consecutiveFailures: 1 }),
+    NOW
+  ) as Check;
+  eq('one failure → fail', once.status, 'fail');
+  ok('no streak claimed', !once.detail.includes('in a row'), once.detail);
+  ok('and the fix says it may clear itself', (once.fix ?? '').includes('next run succeeds'), once.fix);
+
+  // The question "is this new, or has it been broken all week?" is the one
+  // you actually want answered, and the timestamp alone cannot answer it.
+  const many = gradeJob(
+    'sync-prices',
+    run({
+      status: 'failed',
+      error: 'value out of range [22003]',
+      consecutiveFailures: 61,
+      failingSince: new Date(NOW.getTime() - 5 * 3_600_000),
+    }),
+    NOW
+  ) as Check;
+  ok('a streak is reported', many.detail.includes('61 runs in a row'), many.detail);
+  ok('separated from the error text', many.detail.includes('\u2014 failing for'), many.detail);
+  ok('with how long it has been going', many.detail.includes('5h'), many.detail);
+  ok('and the fix says nothing is updating', (many.fix ?? '').includes('nothing it writes'), many.fix);
+
+  // Without a start time there is no honest duration to quote, so none is.
+  const noSince = gradeJob(
+    'sync-prices',
+    run({ status: 'failed', error: 'x', consecutiveFailures: 9, failingSince: null }),
+    NOW
+  ) as Check;
+  ok('no invented duration', !noSince.detail.includes('in a row'), noSince.detail);
 }
 
 console.log('\nLateness is two intervals, never less than ten minutes');
@@ -277,6 +345,48 @@ console.log('\nThe worst status wins, and unknown is not a pass');
   );
 }
 
+console.log('\nThe error reported is the database\u2019s, not the SQL that caused it');
+{
+  // Drizzle puts the whole failing statement in `message` and the real
+  // complaint in `cause`. Taking `message` is what put 400 characters of
+  // "insert into osrs_prices ($1, $2, $3…)" on the health page and none of
+  // the reason. All three of these produce an identical `message`.
+  const drizzleLike = (cause: Record<string, unknown>) => {
+    const e = new Error('Failed query: insert into "osrs_prices" ("item_id", "high") values ($1, $2), ($3, $4)');
+    (e as unknown as { cause: unknown }).cause = cause;
+    return e;
+  };
+
+  const overflow = errorMessage(
+    drizzleLike({ message: 'value "3000000000" is out of range for type integer', code: '22003' })
+  );
+  ok('reports the overflow, not the insert', overflow.startsWith('value "3000000000"'), overflow);
+  ok('and carries the code', overflow.includes('[22003]'), overflow);
+  ok('and drops the SQL entirely', !overflow.includes('insert into'), overflow);
+
+  const fk = errorMessage(
+    drizzleLike({
+      message: 'insert or update on table "osrs_prices" violates foreign key constraint "osrs_prices_item_id_fkey"',
+      detail: 'Key (item_id)=(99999999) is not present in table "osrs_items".',
+      constraint: 'osrs_prices_item_id_fkey',
+      code: '23503',
+    })
+  );
+  ok('a constraint violation names the offending value', fk.includes('(item_id)=(99999999)'), fk);
+  ok('and does not repeat the constraint name twice', fk.split('osrs_prices_item_id_fkey').length === 2, fk);
+
+  // The cause may itself be wrapped.
+  const nested = new Error('outer');
+  (nested as unknown as { cause: unknown }).cause = drizzleLike({ message: 'deep cause', code: '42P01' });
+  ok('walks a nested cause chain', errorMessage(nested).startsWith('deep cause'), errorMessage(nested));
+
+  // A chain that loops must not hang the worker.
+  const a = new Error('a'); const b = new Error('b');
+  (a as unknown as { cause: unknown }).cause = b;
+  (b as unknown as { cause: unknown }).cause = a;
+  ok('a circular cause chain terminates', typeof errorMessage(a) === 'string');
+}
+
 console.log('\nError messages are trimmed for a browser, not a terminal');
 {
   eq('an Error becomes its message', errorMessage(new Error('boom')), 'boom');
@@ -315,6 +425,63 @@ console.log('\nDurations read as a person says them');
   eq('days', humanMs(3 * 86_400_000), '3d');
   eq('negative is unknown, not "-1s"', humanMs(-1), 'unknown');
   eq('NaN is unknown', humanMs(NaN), 'unknown');
+}
+
+console.log('\nAn OK row shows what the job actually wrote');
+{
+  // "It ran" and "it did something" are different claims, and this page
+  // exists because of the gap between them.
+  eq('numbers are summarised', summariseResult({ prices: 4012, volumes: 3890 }), '4,012 prices, 3,890 volumes');
+  // A zero is the most interesting value here, not the least — it is a job
+  // succeeding while doing nothing, which is the failure this page hunts.
+  eq('a zero is kept', summariseResult({ fetched: 0 }), '0 fetched');
+  eq('camelCase reads as words', summariseResult({ unknownItems: 3 }), '3 unknown items');
+  eq('snake_case too', summariseResult({ job_runs: 5 }), '5 job runs');
+  eq('non-numbers are skipped', summariseResult({ skipped: true, reason: 'x', bars: 7 }), '7 bars');
+  eq('capped at three', summariseResult({ a: 1, b: 2, c: 3, d: 4 }), '1 a, 2 b, 3 c');
+  eq('nothing numeric → null', summariseResult({ skipped: true }), null);
+  eq('null result → null', summariseResult(null), null);
+  eq('a non-object → null', summariseResult('text'), null);
+  eq('an array → null', summariseResult([1, 2]), null);
+  eq('NaN is skipped', summariseResult({ n: NaN, m: 2 }), '2 m');
+
+  const c = gradeJob('sync-prices', run({ result: { prices: 4012 }, startedAt: minutesAgo(2) }), NOW) as Check;
+  ok('and it reaches the row', c.detail.includes('Wrote 4,012 prices'), c.detail);
+}
+
+console.log('\nOne bad value must not take down four thousand good ones');
+{
+  // high/low are int4. Before safeInt, a single out-of-range price aborted
+  // the whole 1,000-row batch, which meant the price poll died for every
+  // item on the site because of one of them.
+  eq('an ordinary price passes through', safeInt(1_234_567), 1_234_567);
+  eq('the int4 ceiling is allowed', safeInt(INT4_MAX), INT4_MAX);
+  eq('the int4 floor is allowed', safeInt(INT4_MIN), INT4_MIN);
+  eq('one over the ceiling becomes unknown', safeInt(INT4_MAX + 1), null);
+  eq('a wildly large value becomes unknown', safeInt(3_000_000_000), null);
+  eq('one under the floor becomes unknown', safeInt(INT4_MIN - 1), null);
+
+  // Null means unknown and must stay unknown, not become zero: a free item
+  // and an untraded one are completely different things to this app.
+  eq('null stays null', safeInt(null), null);
+  eq('undefined stays null', safeInt(undefined), null);
+  eq('zero is a real value, not nothing', safeInt(0), 0);
+
+  eq('NaN becomes unknown', safeInt(NaN), null);
+  eq('Infinity becomes unknown', safeInt(Infinity), null);
+  eq('a fraction is truncated', safeInt(10.9), 10);
+
+  // Clamping would be worse than nulling: 2,147,483,647 is a plausible-looking
+  // price that someone would flip against.
+  ok('out of range is NOT clamped to the max', safeInt(5_000_000_000) !== INT4_MAX);
+
+  // Timestamps abort a statement the same way an integer does.
+  const ok2026 = new Date('2026-10-27T12:00:00Z');
+  eq('a real date passes through', safeDate(ok2026)?.toISOString(), ok2026.toISOString());
+  eq('an invalid date becomes null', safeDate(new Date('nonsense')), null);
+  eq('a date past the horizon becomes null', safeDate(new Date('9999-01-01T00:00:00Z')), null);
+  eq('the epoch becomes null', safeDate(new Date(0)), null);
+  eq('null stays null', safeDate(null), null);
 }
 
 console.log(`\n${checks - fail}/${checks} checks passed`);

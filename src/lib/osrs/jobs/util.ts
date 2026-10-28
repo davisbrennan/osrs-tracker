@@ -43,3 +43,46 @@ export function sleep(ms: number): Promise<void> {
 }
 
 export type JobResult = Record<string, unknown>;
+
+/**
+ * Postgres int4 bounds. `high` and `low` are integer columns, so a value
+ * outside this range does not round or clamp — it aborts the statement.
+ */
+export const INT4_MIN = -2_147_483_648;
+export const INT4_MAX = 2_147_483_647;
+
+/**
+ * A value an integer column will actually accept, or null.
+ *
+ * Null rather than clamped, deliberately. Clamping 3,000,000,000 to
+ * 2,147,483,647 would publish a wrong price that looks entirely plausible
+ * and would be flipped against; null means "unknown", which the whole app
+ * already handles — ge.ts refuses to rate an item with a missing side.
+ *
+ * The reason this exists at all: these rows are inserted in batches of a
+ * thousand, so ONE out-of-range value takes down the price poll for every
+ * item on the site. Four thousand good prices should not be lost to one bad
+ * one, and the count comes back in the job result so it is visible rather
+ * than silent.
+ */
+export function safeInt(v: number | null | undefined): number | null {
+  if (v === null || v === undefined) return null;
+  if (!Number.isFinite(v)) return null;
+  const n = Math.trunc(v);
+  return n < INT4_MIN || n > INT4_MAX ? null : n;
+}
+
+/**
+ * Postgres timestamptz tops out well before JavaScript's Date does, and the
+ * wiki reports times as Unix seconds that occasionally arrive absurd. An
+ * out-of-range timestamp aborts the statement exactly like an out-of-range
+ * integer does.
+ */
+const MAX_REASONABLE_MS = Date.UTC(2200, 0, 1);
+
+export function safeDate(d: Date | null): Date | null {
+  if (d === null) return null;
+  const ms = d.getTime();
+  if (!Number.isFinite(ms) || ms <= 0 || ms > MAX_REASONABLE_MS) return null;
+  return d;
+}

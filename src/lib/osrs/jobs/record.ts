@@ -28,10 +28,73 @@ export const RUN_RETENTION_DAYS = 14;
  */
 const MAX_ERROR_CHARS = 400;
 
+/**
+ * The driver's error, not the query that produced it.
+ *
+ * Drizzle sets `message` to the ENTIRE failing SQL statement and puts the
+ * database's actual complaint in `cause`. So the obvious `e.message` yields
+ * four hundred characters of `insert into "osrs_prices" ($1, $2, $3…)` and
+ * none of the reason — which is exactly what the health page reported on its
+ * first real failure, and it was useless.
+ *
+ * These three produce an IDENTICAL `e.message`:
+ *
+ *   value "3000000000" is out of range for type integer      22003
+ *   ON CONFLICT DO UPDATE cannot affect row a second time     21000
+ *   violates foreign key constraint "osrs_prices_item_id_fkey" 23503
+ *
+ * The code is kept because it is the one unambiguous, searchable token in a
+ * database error, and `detail` because for a constraint violation it names
+ * the offending value.
+ */
+type PgLike = {
+  message?: unknown;
+  code?: unknown;
+  detail?: unknown;
+  constraint?: unknown;
+  table?: unknown;
+  cause?: unknown;
+};
+
+const str = (v: unknown): string | null =>
+  typeof v === 'string' && v.trim() ? v.trim() : null;
+
+/** The deepest cause in the chain, which is where the driver's error sits. */
+function rootCause(e: unknown, depth = 0): unknown {
+  if (depth > 5 || e === null || typeof e !== 'object') return e;
+  const cause = (e as PgLike).cause;
+  return cause === undefined || cause === null ? e : rootCause(cause, depth + 1);
+}
+
 export function errorMessage(e: unknown): string {
-  const raw =
-    e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e) || 'unknown';
-  const oneLine = raw.replace(/\s+/g, ' ').trim();
+  const root = rootCause(e) as PgLike | null;
+
+  const parts: string[] = [];
+  const primary =
+    str(root?.message) ??
+    (e instanceof Error ? e.message : null) ??
+    (typeof e === 'string' ? e : null) ??
+    (() => {
+      try {
+        return JSON.stringify(e) || null;
+      } catch {
+        return null;
+      }
+    })() ??
+    'unknown error';
+
+  parts.push(primary);
+
+  const detail = str(root?.detail);
+  if (detail && detail !== primary) parts.push(detail);
+
+  const constraint = str(root?.constraint);
+  if (constraint && !primary.includes(constraint)) parts.push(`constraint ${constraint}`);
+
+  const code = str(root?.code);
+  if (code) parts.push(`[${code}]`);
+
+  const oneLine = parts.join(' ').replace(/\s+/g, ' ').trim();
   return oneLine.length > MAX_ERROR_CHARS ? `${oneLine.slice(0, MAX_ERROR_CHARS - 1)}…` : oneLine;
 }
 

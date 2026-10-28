@@ -69,6 +69,15 @@ export type JobRun = {
   error: string | null;
   durationMs: number | null;
   result: unknown;
+  /**
+   * Consecutive failures since the last success, and when the rot started.
+   *
+   * "Last run failed 2m ago" is true of a job that broke two minutes ago and
+   * of one that has been broken for a week, and those call for different
+   * reactions. This is the difference.
+   */
+  failingSince?: Date | null;
+  consecutiveFailures?: number;
 };
 
 /**
@@ -90,19 +99,41 @@ export function lateAfterMs(everyMs: number): number {
 export function gradeJob(
   job: JobName,
   last: JobRun | undefined,
-  now: Date = new Date()
+  now: Date = new Date(),
+  /**
+   * How long the run log has been collecting, i.e. the age of its oldest
+   * row. Null when the table is empty.
+   */
+  logAgeMs: number | null = null
 ): Check {
   const def = JOBS[job];
   const every = humanMs(def.everyMs);
   const base = { id: `job-${job}`, title: job };
 
   if (!last) {
+    // "Never run" is only evidence of a problem if the job has HAD a chance
+    // to run. The log starts empty on the release that introduced it, so a
+    // job on a 24-hour cadence legitimately has nothing in it for a day —
+    // and reporting that as broken made three of the six red lines on the
+    // first real deploy false alarms of this page's own making.
+    if (logAgeMs !== null && logAgeMs < def.everyMs) {
+      return {
+        ...base,
+        status: 'unknown',
+        detail: `No run recorded yet. This job runs every ${every}, and the log has only been collecting for ${humanMs(logAgeMs)}.`,
+        fix: `Nothing to do but wait — it has not come round yet. Expect it within ${every} of the worker starting.`,
+      };
+    }
+
     // The distinction this whole table exists for. Never having run is not
     // the same as having nothing to do, and only one of them is fine.
     return {
       ...base,
       status: 'fail',
-      detail: `Has never run. Expected every ${every}.`,
+      detail:
+        logAgeMs === null
+          ? `Has never run. Expected every ${every}.`
+          : `Has never run, and the log has been collecting for ${humanMs(logAgeMs)} — longer than its ${every} cadence.`,
       fix: 'The worker is not running this job at all — check that the worker container is up and that it registered its schedules on boot.',
       command: 'docker compose logs worker --tail 50',
     };
@@ -126,11 +157,25 @@ export function gradeJob(
   }
 
   if (last.status === 'failed') {
+    const runs = last.consecutiveFailures ?? 1;
+    const since = last.failingSince
+      ? now.getTime() - last.failingSince.getTime()
+      : null;
+    // One failure is a blip worth watching; a run of them since a datable
+    // moment is a regression, and usually points at whatever shipped then.
+    const history =
+      runs > 1 && since !== null
+        ? ` \u2014 failing for ${humanMs(since)} now, ${runs} runs in a row.`
+        : '';
+
     return {
       ...base,
       status: 'fail',
-      detail: `Last run failed ${humanMs(ageMs)} ago: ${last.error ?? 'no message recorded'}`,
-      fix: 'The job is throwing. The message above is the first line; the container log has the stack.',
+      detail: `Last run failed ${humanMs(ageMs)} ago: ${last.error ?? 'no message recorded'}${history}`,
+      fix:
+        runs > 1
+          ? 'The job is throwing every time, so nothing it writes is being updated. The message above is the database\u2019s own; the container log has the stack.'
+          : 'The job threw once. If the next run succeeds this clears itself; if not, the message above is the database\u2019s own.',
       command: `docker compose logs worker --tail 100 | grep ${job}`,
     };
   }
@@ -146,6 +191,7 @@ export function gradeJob(
   }
 
   const took = last.durationMs !== null ? `, took ${humanMs(last.durationMs)}` : '';
+  const did = summariseResult(last.result);
   if (last.status === 'skipped') {
     return {
       ...base,
@@ -155,7 +201,11 @@ export function gradeJob(
     };
   }
 
-  return { ...base, status: 'ok', detail: `Ran ${humanMs(ageMs)} ago${took}. Every ${every}.` };
+  return {
+    ...base,
+    status: 'ok',
+    detail: `Ran ${humanMs(ageMs)} ago${took}. Every ${every}.${did ? ` Wrote ${did}.` : ''}`,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -370,6 +420,30 @@ export function percent(part: number, whole: number): number {
   if (whole <= 0) return 0;
   if (part >= whole) return 100;
   return Math.min(99, Math.round((part / whole) * 100));
+}
+
+/**
+ * The numbers a job reported, compactly.
+ *
+ * The page's whole argument is that "it ran" and "it did something" are
+ * different claims, so an OK row that only proves the first one is doing
+ * half its job. sync-prices reporting `prices: 4012` is the evidence;
+ * reporting `prices: 0` is a problem wearing a green badge.
+ *
+ * Only finite numbers, only the first few, and zeroes kept — a zero is the
+ * most interesting value here, not the least.
+ */
+export function summariseResult(result: unknown, max = 3): string | null {
+  if (result === null || typeof result !== 'object' || Array.isArray(result)) return null;
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(result as Record<string, unknown>)) {
+    if (parts.length >= max) break;
+    if (typeof v !== 'number' || !Number.isFinite(v)) continue;
+    // camelCase and snake_case both read better as words here.
+    const label = k.replace(/[_-]/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
+    parts.push(`${v.toLocaleString('en-US')} ${label}`);
+  }
+  return parts.length ? parts.join(', ') : null;
 }
 
 /** Durations as a person reads them. */

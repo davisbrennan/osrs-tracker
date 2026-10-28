@@ -22,7 +22,7 @@ import { osrsPriceDaily } from '@/database/schema';
 import { fetchTimeseries } from '@/lib/osrs/api';
 import { HISTORY_RETENTION_DAYS } from '@/lib/osrs/jobs/sync-prices';
 import { MIN_SAMPLE_DAYS } from '@/lib/osrs/stats';
-import { sleep, type JobResult } from '@/lib/osrs/jobs/util';
+import { sleep, safeInt, type JobResult } from '@/lib/osrs/jobs/util';
 
 /** Items per run. One request each. */
 const ITEMS_PER_RUN = 40;
@@ -90,8 +90,10 @@ export async function backfillHistory(budget = ITEMS_PER_RUN): Promise<JobResult
         // The column is a date; an ISO date string is unambiguous about which
         // day a timestamp belongs to, which a Date in a local zone is not.
         day: v.day.toISOString().slice(0, 10),
-        avgHigh: v.avgHigh,
-        avgLow: v.avgLow,
+        // Integer columns: a value the wiki sends that is too large aborts
+        // the whole batch rather than rounding. See safeInt.
+        avgHigh: safeInt(v.avgHigh),
+        avgLow: safeInt(v.avgLow),
         volume: v.volume,
       }));
 

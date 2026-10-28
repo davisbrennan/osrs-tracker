@@ -12,7 +12,14 @@ import { sql, inArray } from 'drizzle-orm';
 import { db } from '@/database';
 import { osrsItems, osrsPrices, osrsPriceHistory } from '@/database/schema';
 import { fetchLatest, fetchHourly } from '@/lib/osrs/api';
-import { chunk, secondsToDate, hourBucket, type JobResult } from '@/lib/osrs/jobs/util';
+import {
+  chunk,
+  secondsToDate,
+  hourBucket,
+  safeInt,
+  safeDate,
+  type JobResult,
+} from '@/lib/osrs/jobs/util';
 
 /**
  * How long hourly history is kept. Roughly 4,000 items x 24 hours is 96,000
@@ -44,6 +51,10 @@ export async function syncPrices(now: Date = new Date()): Promise<JobResult> {
 
   const priceRows: (typeof osrsPrices.$inferInsert)[] = [];
   let unknownItems = 0;
+  // Values the wiki sent that an integer column will not take. Counted
+  // rather than ignored: a number that cannot be stored is worth knowing
+  // about, and a count of zero is the normal case.
+  let rejectedValues = 0;
 
   for (const p of latest) {
     if (!known.has(p.itemId)) {
@@ -51,14 +62,22 @@ export async function syncPrices(now: Date = new Date()): Promise<JobResult> {
       continue;
     }
     const v = volumeById.get(p.itemId);
+
+    // Nulls are preserved all the way down. An item that has never traded
+    // is unknown, not free — see the note in api.ts about Number(null).
+    // safeInt turns a value too large for the column into the same
+    // "unknown" rather than letting it abort the batch; before this, one
+    // out-of-range price stopped the poll for all four thousand items.
+    const high = safeInt(p.high);
+    const low = safeInt(p.low);
+    if ((p.high !== null && high === null) || (p.low !== null && low === null)) rejectedValues++;
+
     priceRows.push({
       itemId: p.itemId,
-      // Nulls are preserved all the way down. An item that has never traded
-      // is unknown, not free — see the note in api.ts about Number(null).
-      high: p.high,
-      highTime: secondsToDate(p.highTime),
-      low: p.low,
-      lowTime: secondsToDate(p.lowTime),
+      high,
+      highTime: safeDate(secondsToDate(p.highTime)),
+      low,
+      lowTime: safeDate(secondsToDate(p.lowTime)),
       // Both sides summed, which is the shape confidenceOf() in ge.ts expects.
       hourlyVolume: v ? v.highVolume + v.lowVolume : 0,
       fetchedAt: now,
@@ -88,6 +107,7 @@ export async function syncPrices(now: Date = new Date()): Promise<JobResult> {
     prices: priceRows.length,
     volumes: hourly.length,
     unknownItems,
+    rejectedValues,
     ...history,
   };
 }
@@ -113,8 +133,9 @@ async function writeHourlyHistory(
     .map((v) => ({
       itemId: v.itemId,
       ts,
-      avgHigh: v.avgHigh,
-      avgLow: v.avgLow,
+      // Integer columns, same exposure as the price row above.
+      avgHigh: safeInt(v.avgHigh),
+      avgLow: safeInt(v.avgLow),
       highVolume: v.highVolume,
       lowVolume: v.lowVolume,
     }));

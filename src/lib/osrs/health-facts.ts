@@ -45,6 +45,19 @@ function asNumber(v: unknown): number {
 }
 
 /** The most recent run of each job, keyed by name. */
+/** Age of the oldest recorded run, i.e. how long the log has been collecting. */
+export async function runLogAgeMs(): Promise<number | null> {
+  try {
+    const rows = rowsOf<Record<string, unknown>>(
+      await db.execute(sql`select min(started_at) as oldest from osrs_job_runs`)
+    );
+    const oldest = asDate(rows[0]?.oldest);
+    return oldest ? Date.now() - oldest.getTime() : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function latestRuns(): Promise<Map<string, JobRun>> {
   const out = new Map<string, JobRun>();
   try {
@@ -70,6 +83,31 @@ export async function latestRuns(): Promise<Map<string, JobRun>> {
         durationMs: r.duration_ms === null ? null : asNumber(r.duration_ms),
         result: r.result ?? null,
       });
+    }
+
+    // How long each job has been failing: every run since its last success.
+    // Separate query rather than a window function because it has to cope
+    // with a job that has NEVER succeeded, where "since the last ok" has no
+    // row to anchor to.
+    const streaks = rowsOf<Record<string, unknown>>(
+      await db.execute(sql`
+        select job,
+               count(*) filter (where status = 'failed')::int as fails,
+               min(started_at) filter (where status = 'failed') as since
+          from osrs_job_runs r
+         where started_at > coalesce(
+                 (select max(started_at) from osrs_job_runs ok
+                   where ok.job = r.job and ok.status = 'ok'),
+                 '-infinity'::timestamptz)
+         group by job
+      `)
+    );
+    for (const row of streaks) {
+      if (typeof row.job !== 'string') continue;
+      const entry = out.get(row.job);
+      if (!entry) continue;
+      entry.consecutiveFailures = asNumber(row.fails);
+      entry.failingSince = asDate(row.since);
     }
   } catch {
     // Most likely the table does not exist yet, i.e. the migration has not
@@ -193,7 +231,7 @@ export type HealthReport = {
 };
 
 export async function healthReport(now: Date = new Date()): Promise<HealthReport> {
-  const runs = await latestRuns();
+  const [runs, logAgeMs] = await Promise.all([latestRuns(), runLogAgeMs()]);
 
   // Gathered in parallel: this page is read when something is wrong, and
   // six sequential round trips is a page that feels broken too.
@@ -206,7 +244,7 @@ export async function healthReport(now: Date = new Date()): Promise<HealthReport
   ]);
 
   const jobs = (Object.keys(JOBS) as JobName[]).map((name) =>
-    gradeJob(name, runs.get(name), now)
+    gradeJob(name, runs.get(name), now, logAgeMs)
   );
 
   return {

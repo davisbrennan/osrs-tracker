@@ -15,7 +15,7 @@
 import { Worker, Queue, type Job } from 'bullmq';
 import IORedis from 'ioredis';
 import { JOBS, isJobName, type JobName } from '@/lib/osrs/jobs';
-import { recordRun, recordSkip } from '@/lib/osrs/jobs/record';
+import { recordRun, recordSkip, errorMessage } from '@/lib/osrs/jobs/record';
 
 const connection = new IORedis(process.env.REDIS_URL || 'redis://cache:6379', {
   maxRetriesPerRequest: null,
@@ -87,10 +87,17 @@ const worker = new Worker(
   }
 );
 
+// errorMessage, not err.message: for anything from the database driver
+// `message` is the whole failing SQL statement and the actual complaint is
+// nested in `cause`. Logging `message` is why the container log was no more
+// use than the health page for the first failure this caught.
 worker.on('failed', (job, err) =>
-  console.error(`[worker] failed ${job?.name} (attempt ${job?.attemptsMade}):`, err.message)
+  console.error(
+    `[worker] failed ${job?.name} (attempt ${job?.attemptsMade}):`,
+    errorMessage(err)
+  )
 );
-worker.on('error', (err) => console.error('[worker] error:', err.message));
+worker.on('error', (err) => console.error('[worker] error:', errorMessage(err)));
 
 /**
  * Register the schedules.
