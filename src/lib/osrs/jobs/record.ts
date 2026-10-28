@@ -18,6 +18,16 @@ import type { JobResult } from '@/lib/osrs/jobs/util';
 
 export type RunStatus = 'running' | 'ok' | 'failed' | 'skipped';
 
+/**
+ * The build this process is running.
+ *
+ * Baked into the image at build time, so the worker and the web app report
+ * the same value only when they are genuinely on the same image.
+ */
+export function buildSha(): string {
+  return process.env.NEXT_PUBLIC_BUILD_SHA || 'dev';
+}
+
 /** How long runs are kept. Enough to see a pattern, not enough to grow. */
 export const RUN_RETENTION_DAYS = 14;
 
@@ -94,7 +104,18 @@ export function errorMessage(e: unknown): string {
   const code = str(root?.code);
   if (code) parts.push(`[${code}]`);
 
-  const oneLine = parts.join(' ').replace(/\s+/g, ' ').trim();
+  let oneLine = parts.join(' ').replace(/\s+/g, ' ').trim();
+
+  // Last resort. If all we have is Drizzle's wrapper — no cause attached,
+  // for whatever reason — then spending four hundred characters on the SQL
+  // helps nobody. Keep enough of the statement to identify it and say
+  // plainly that the reason was not attached, so the row stays readable and
+  // points somewhere useful instead of just being long.
+  if (/^Failed query:/i.test(oneLine) && !str(root?.code)) {
+    const sql = oneLine.replace(/^Failed query:\s*/i, '');
+    oneLine = `${sql.slice(0, 120)}… — the driver attached no cause; see the worker log for the reason`;
+  }
+
   return oneLine.length > MAX_ERROR_CHARS ? `${oneLine.slice(0, MAX_ERROR_CHARS - 1)}…` : oneLine;
 }
 
@@ -107,8 +128,8 @@ export async function startRun(job: string): Promise<number | null> {
   try {
     const rows = rowsOf<{ id: number }>(
       await db.execute(sql`
-        insert into osrs_job_runs (job, started_at, status)
-        values (${job}, now(), 'running')
+        insert into osrs_job_runs (job, started_at, status, build)
+        values (${job}, now(), 'running', ${buildSha()})
         returning id
       `)
     );

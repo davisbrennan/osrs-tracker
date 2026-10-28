@@ -25,9 +25,11 @@ import {
   gradeWiki,
   gradeHistory,
   gradeAlerts,
+  gradeBuild,
   type Check,
   type JobRun,
 } from '@/lib/osrs/health';
+import { buildSha } from '@/lib/osrs/jobs/record';
 
 /** Turns whatever the driver hands back into a Date, or null. */
 function asDate(v: unknown): Date | null {
@@ -66,7 +68,7 @@ export async function latestRuns(): Promise<Map<string, JobRun>> {
     const rows = rowsOf<Record<string, unknown>>(
       await db.execute(sql`
         select distinct on (job)
-               job, started_at, finished_at, status, error, duration_ms, result
+               job, started_at, finished_at, status, error, duration_ms, result, build
           from osrs_job_runs
          order by job, started_at desc
       `)
@@ -82,6 +84,7 @@ export async function latestRuns(): Promise<Map<string, JobRun>> {
         error: typeof r.error === 'string' ? r.error : null,
         durationMs: r.duration_ms === null ? null : asNumber(r.duration_ms),
         result: r.result ?? null,
+        build: typeof r.build === 'string' ? r.build : null,
       });
     }
 
@@ -243,13 +246,19 @@ export async function healthReport(now: Date = new Date()): Promise<HealthReport
     alertsCheck(),
   ]);
 
+  // Whichever build most recently wrote a run is the one the worker is on.
+  const newest = [...runs.values()].sort(
+    (a, b) => b.startedAt.getTime() - a.startedAt.getTime()
+  )[0];
+  const build = gradeBuild({ app: buildSha(), worker: newest?.build ?? null });
+
   const jobs = (Object.keys(JOBS) as JobName[]).map((name) =>
     gradeJob(name, runs.get(name), now, logAgeMs)
   );
 
   return {
     jobs,
-    features: [catalogue, methods, wiki, history, alerts],
+    features: [catalogue, methods, wiki, history, alerts, build],
     noRunsRecorded: runs.size === 0,
   };
 }

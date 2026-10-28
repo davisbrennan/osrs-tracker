@@ -18,6 +18,7 @@ const {
   gradeWiki,
   gradeHistory,
   gradeAlerts,
+  gradeBuild,
   overallStatus,
   countByStatus,
   lateAfterMs,
@@ -324,6 +325,50 @@ console.log('\nAlerts with no email key is the worst combination');
   // everything else it says.
   const one = gradeAlerts({ active: 1, emailConfigured: true }) as Check;
   ok('1 alert reads as singular', one.detail.includes('1 active alert,'), one.detail);
+}
+
+console.log('\nThe worker running an older build than the site is a failure');
+{
+  // Separate containers from one image, so a deploy can flip the site and
+  // leave the worker behind. Everything then looks shipped while every
+  // background job runs the old code — invisible from inside the app, and
+  // exactly how a fix to error reporting appeared not to have worked.
+  const drift = gradeBuild({ app: 'a1b2c3d', worker: '9f8e7d6' }) as Check;
+  eq('mismatched builds → fail', drift.status, 'fail');
+  ok('names both builds', drift.detail.includes('a1b2c3d') && drift.detail.includes('9f8e7d6'), drift.detail);
+  ok('and says the jobs are the stale half', drift.detail.includes('older code'), drift.detail);
+  ok('with a command to recreate the worker', (drift.command ?? '').includes('worker'), drift.command);
+
+  eq('matching builds → ok', (gradeBuild({ app: 'a1b2c3d', worker: 'a1b2c3d' }) as Check).status, 'ok');
+
+  // Nothing recorded yet is unknown, not broken — the column is new.
+  const unstamped = gradeBuild({ app: 'a1b2c3d', worker: null }) as Check;
+  eq('no worker build recorded → unknown', unstamped.status, 'unknown');
+  ok('but says how to tell the two cases apart', (unstamped.fix ?? '').includes('running older code'), unstamped.fix);
+
+  // Outside Docker neither is stamped; that is not a deploy problem.
+  eq('unstamped dev → unknown', (gradeBuild({ app: 'dev', worker: 'dev' }) as Check).status, 'unknown');
+  eq('one side unstamped → unknown', (gradeBuild({ app: 'dev', worker: 'a1b2c3d' }) as Check).status, 'unknown');
+}
+
+console.log('\nA driver error with no cause attached is still made readable');
+{
+  // If the wrapper is all there is, 400 characters of SQL helps nobody.
+  const bare = new Error(
+    'Failed query: insert into "osrs_prices" ("item_id", "high", "high_time", "low", "low_time", "hourly_volume", "fetched_at") values ($1, $2, $3, $4, $5, $6, $7), ($8, $9, $10, $11, $12, $13, $14), ($15, $16, $17, $18, $19, $20, $21), ($22, $23, $24, $25, $26, $27, $28)'
+  );
+  const msg = errorMessage(bare);
+  ok('the statement is cut short', msg.length < 220, String(msg.length));
+  ok('it still identifies the table', msg.includes('osrs_prices'), msg);
+  ok('and says the reason was not attached', msg.includes('no cause'), msg);
+  ok('the "Failed query" preamble is dropped', !msg.startsWith('Failed query'), msg);
+
+  // But when a cause IS attached this path must not fire.
+  const withCause = new Error('Failed query: insert into "osrs_prices" (…)');
+  (withCause as unknown as { cause: unknown }).cause = { message: 'disk full', code: '53100' };
+  const good = errorMessage(withCause);
+  ok('a real cause is reported instead', good.startsWith('disk full'), good);
+  ok('and no "no cause" note is added', !good.includes('no cause'), good);
 }
 
 console.log('\nThe worst status wins, and unknown is not a pass');

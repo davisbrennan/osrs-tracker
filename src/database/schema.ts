@@ -359,6 +359,8 @@ export const osrsJobRuns = pgTable(
     /** Message only, never a stack trace. */
     error: text('error'),
     durationMs: integer('duration_ms'),
+    /** The image build that recorded this run. See 0007. */
+    build: text('build'),
   },
   (t) => [index('osrs_job_runs_job_started_idx').on(t.job, t.startedAt.desc())]
 );

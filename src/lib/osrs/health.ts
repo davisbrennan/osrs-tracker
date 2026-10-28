@@ -78,6 +78,8 @@ export type JobRun = {
    */
   failingSince?: Date | null;
   consecutiveFailures?: number;
+  /** The image build that recorded this run. */
+  build?: string | null;
 };
 
 /**
@@ -206,6 +208,54 @@ export function gradeJob(
     status: 'ok',
     detail: `Ran ${humanMs(ageMs)} ago${took}. Every ${every}.${did ? ` Wrote ${did}.` : ''}`,
   };
+}
+
+/**
+ * Is the worker running the same build as the site?
+ *
+ * They are separate containers from one image, so a deploy can update the
+ * site and leave the worker on the previous build. Everything then looks
+ * shipped while every background job still runs the old code — and from
+ * inside the app that is completely invisible, which is how a fix to job
+ * error reporting appeared not to work when in fact it had simply never
+ * reached the worker.
+ */
+export function gradeBuild(facts: { app: string; worker: string | null }): Check {
+  const base = { id: 'build', title: 'App and worker build' };
+
+  if (!facts.worker) {
+    // A STALE worker produces exactly this: it does not know to stamp the
+    // column, so it writes nothing there. That cannot honestly be called a
+    // failure, because a freshly added column looks identical — but the
+    // reader can tell the two apart with one observation, so say which.
+    return {
+      ...base,
+      status: 'unknown',
+      detail: `The site is on ${facts.app}, and no job run has stamped its build yet.`,
+      fix: 'A worker on this release stamps its next run, so this resolves itself within minutes of one finishing. If it still says this afterwards, the worker is running older code and did not pick up the deploy.',
+      command: 'cd /srv/osrs && docker compose ps worker && docker compose images worker',
+    };
+  }
+
+  if (facts.app === 'dev' || facts.worker === 'dev') {
+    return {
+      ...base,
+      status: 'unknown',
+      detail: `Build not stamped (app ${facts.app}, worker ${facts.worker}) — normal outside a Docker build.`,
+    };
+  }
+
+  if (facts.app !== facts.worker) {
+    return {
+      ...base,
+      status: 'fail',
+      detail: `The site is on ${facts.app} but the worker is still on ${facts.worker}. Every background job is running the older code.`,
+      fix: 'The deploy updated the app and not the worker. Restarting it on the current image fixes it, and nothing is lost — jobs are idempotent.',
+      command: 'cd /srv/osrs && APP_TAG=$(cat releases/current) docker compose up -d --no-deps --force-recreate worker',
+    };
+  }
+
+  return { ...base, status: 'ok', detail: `Both on ${facts.app}.` };
 }
 
 /* ------------------------------------------------------------------ */

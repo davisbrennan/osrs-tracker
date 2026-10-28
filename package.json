@@ -26,7 +26,8 @@
     "test:wiki": "tsx scripts/test-wiki.mts",
     "test:portfolio": "tsx scripts/test-portfolio.mts",
     "test:seo": "tsx scripts/test-seo.mts",
-    "test:health": "tsx scripts/test-health.mts"
+    "test:health": "tsx scripts/test-health.mts",
+    "test:resilience": "tsx scripts/test-resilience.mts"
   },
   "dependencies": {
     "better-auth": "^1.7.1",
