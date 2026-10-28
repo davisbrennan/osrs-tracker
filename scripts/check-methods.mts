@@ -31,9 +31,12 @@ await client.connect();
 const wanted = methodItemNames();
 const variants = wanted.flatMap(nameVariants);
 
+// lower(name), to match loadMethodCatalogue. A plain `name = ANY(...)` is
+// case sensitive, which made this checker disagree with the resolver it is
+// supposed to be checking.
 const { rows } = await client.query<{ id: number; name: string }>(
-  'SELECT id, name FROM osrs_items WHERE name = ANY($1::text[])',
-  [variants]
+  'SELECT id, name FROM osrs_items WHERE lower(name) = ANY($1::text[])',
+  [variants.map((v) => v.toLowerCase())]
 );
 
 const catalogueSize = await client.query<{ count: string }>('SELECT count(*) FROM osrs_items');

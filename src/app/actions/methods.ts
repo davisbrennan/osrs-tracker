@@ -1,6 +1,6 @@
 'use server';
 
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { db } from '@/database';
 import { osrsItems, osrsPrices } from '@/database/schema';
 import { METHODS, methodItemNames } from '@/lib/osrs/method-data';
@@ -24,7 +24,14 @@ export type MethodCatalogue = {
  * LIKE scan over four thousand rows.
  */
 export async function loadMethodCatalogue(): Promise<MethodCatalogue> {
-  const wanted = methodItemNames().flatMap(nameVariants);
+  // Lower-cased, because the comparison below is on lower(name). The
+  // resolver always intended to match case-insensitively — buildNameIndex
+  // lower-cases its keys — but the query that feeds it used plain equality,
+  // so a name differing only in capitalisation returned no row and the
+  // normalisation never ran. See drizzle/0008.
+  const wanted = methodItemNames()
+    .flatMap(nameVariants)
+    .map((n) => n.toLowerCase());
 
   const rows = await db
     .select({
@@ -36,7 +43,7 @@ export async function loadMethodCatalogue(): Promise<MethodCatalogue> {
     })
     .from(osrsItems)
     .leftJoin(osrsPrices, eq(osrsPrices.itemId, osrsItems.id))
-    .where(inArray(osrsItems.name, wanted));
+    .where(inArray(sql`lower(${osrsItems.name})`, wanted));
 
   const index = buildNameIndex(rows);
   const { resolved, failed } = resolveMethods(METHODS, index);

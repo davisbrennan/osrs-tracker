@@ -306,6 +306,8 @@ export function gradeMethods(facts: {
    *  are two fields and not one. Counting names as methods produced
    *  "57 of 28 methods dropped" on the first run of this page. */
   names: string[];
+  /** Nearest real catalogue name for each, where there is a close one. */
+  suggestions?: Record<string, string>;
 }): Check {
   const base = { id: 'methods', title: 'Money makers' };
   if (facts.total === 0) {
@@ -320,7 +322,13 @@ export function gradeMethods(facts: {
     return { ...base, status: 'ok', detail: `All ${facts.total} methods resolved and priced.` };
   }
 
-  const shown = facts.names.slice(0, 4).join(', ');
+  // "You meant this one" beats "that one is wrong". The suggestion comes
+  // from the item table itself, so it is the catalogue's own answer.
+  const label = (n: string) => {
+    const did = facts.suggestions?.[n];
+    return did ? `${n} (did you mean "${did}"?)` : n;
+  };
+  const shown = facts.names.slice(0, 4).map(label).join(', ');
   const more = facts.names.length > 4 ? `, +${facts.names.length - 4} more` : '';
   const all = facts.failedMethods >= facts.total;
   const items = `${facts.names.length} unresolved item name${facts.names.length === 1 ? '' : 's'}`;

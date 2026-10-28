@@ -17,6 +17,8 @@ import { db, rowsOf } from '@/database';
 import { JOBS, type JobName } from '@/lib/osrs/jobs';
 import { loadMethodCatalogue } from '@/app/actions/methods';
 import { METHODS } from '@/lib/osrs/method-data';
+import { closestName } from '@/lib/osrs/method-resolve';
+import { osrsItems } from '@/database/schema';
 import { MIN_SAMPLE_DAYS } from '@/lib/osrs/stats';
 import {
   gradeJob,
@@ -151,10 +153,30 @@ async function methodsCheck(): Promise<Check> {
     const catalogue = await loadMethodCatalogue();
     // Two different counts: methods dropped, and the distinct item names
     // behind them. One method has several inputs, so these are never equal.
+    const names = [...new Set(catalogue.failed.flatMap((f) => f.missing))];
+
+    // Only when something actually failed, and only the first few: this
+    // reads every item name in the catalogue, which is not work to do on a
+    // page that is usually all green.
+    const suggestions: Record<string, string> = {};
+    if (names.length > 0) {
+      try {
+        const all = await db.select({ name: osrsItems.name }).from(osrsItems);
+        const candidates = all.map((r) => r.name);
+        for (const n of names.slice(0, 4)) {
+          const did = closestName(n, candidates);
+          if (did) suggestions[n] = did;
+        }
+      } catch {
+        // A suggestion is a nicety; the finding itself still stands.
+      }
+    }
+
     return gradeMethods({
       total: METHODS.length,
       failedMethods: catalogue.failed.length,
-      names: [...new Set(catalogue.failed.flatMap((f) => f.missing))],
+      names,
+      suggestions,
     });
   } catch (e) {
     return unknownCheck('methods', 'Money makers', String(e).slice(0, 120));

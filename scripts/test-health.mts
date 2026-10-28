@@ -31,6 +31,7 @@ const { JOBS } = await import('@/lib/osrs/jobs');
 const { errorMessage } = await import('@/lib/osrs/jobs/record');
 const { MIN_SAMPLE_DAYS } = await import('@/lib/osrs/stats');
 const { safeInt, safeDate, INT4_MAX, INT4_MIN } = await import('@/lib/osrs/jobs/util');
+const { editDistance, closestName, normaliseItemName } = await import('@/lib/osrs/method-resolve');
 
 type Check = { id: string; title: string; status: string; detail: string; fix?: string; command?: string };
 type JobRun = {
@@ -269,6 +270,42 @@ console.log('\nMoney makers: all-unresolved is worse than some');
   // kind of thing that makes people doubt the rest of it.
   const one = gradeMethods({ total: 28, failedMethods: 1, names: ['Guam leaf'] }) as Check;
   ok('one name reads as singular', one.detail.includes('1 unresolved item name:'), one.detail);
+}
+
+console.log('\nA wrong item name points at the right one');
+{
+  // The catalogue is the authority on what an item is called, so the
+  // suggestion is read out of it rather than recalled.
+  const items = ['Wine of Zamorak', 'Dwarf weed', 'Ranarr weed', 'Snapdragon', 'Grimy guam leaf'];
+
+  eq('case-only differences are distance 0 once normalised',
+     editDistance(normaliseItemName('Wine of zamorak'), normaliseItemName('Wine of Zamorak')), 0);
+  eq('a one-letter typo is distance 1', editDistance('ranarr weed', 'ranarr wees'), 1);
+  eq('identical strings are 0', editDistance('abc', 'abc'), 0);
+  eq('an empty string costs the other length', editDistance('', 'abcd'), 4);
+
+  eq('a typo finds its item', closestName('Dwarf weeed', items), 'Dwarf weed');
+  eq('and case alone certainly does', closestName('wine of zamorak', items), 'Wine of Zamorak');
+
+  // A name nothing resembles must get NO suggestion. A confidently wrong
+  // "did you mean" is worse than none, because it gets acted on.
+  eq('an unrelated name suggests nothing', closestName('Dragon warhammer', items), null);
+  eq('nothing to compare against suggests nothing', closestName('Ranarr weed', []), null);
+
+  // "Guam leaf" must not be matched to "Grimy guam leaf" — six edits apart
+  // and a genuinely different item.
+  eq('a short name is not matched to a long one', closestName('Guam leaf', ['Grimy guam leaf']), null);
+
+  const c = gradeMethods({
+    total: 28,
+    failedMethods: 1,
+    names: ['Wine of zamorak'],
+    suggestions: { 'Wine of zamorak': 'Wine of Zamorak' },
+  }) as Check;
+  ok('the suggestion reaches the row', c.detail.includes('did you mean "Wine of Zamorak"'), c.detail);
+
+  const none = gradeMethods({ total: 28, failedMethods: 1, names: ['Nonsense item'] }) as Check;
+  ok('and is simply absent when there is none', !none.detail.includes('did you mean'), none.detail);
 }
 
 console.log('\nWiki: ran-but-wrote-nothing is a failure, not patience');

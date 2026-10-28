@@ -105,3 +105,62 @@ export function resolveMethods(
 
   return { resolved, failed };
 }
+
+/**
+ * The closest catalogue name to one that did not resolve.
+ *
+ * "This name is wrong" is a report; "this name is wrong, you probably meant
+ * that one" is a fix. The authority on what an item is called is the item
+ * table, so the suggestion comes from there rather than from anyone's
+ * recollection of what OSRS calls things.
+ *
+ * Plain edit distance on the normalised strings. The dataset's mistakes are
+ * typos, capitalisation and singular/plural — all small distances — so
+ * nothing cleverer earns its complexity here.
+ */
+export function editDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  // One row at a time: the catalogue is thousands of names and the full
+  // matrix is never needed.
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      row[j] = Math.min(row[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+    }
+    prev = row;
+  }
+  return prev[b.length];
+}
+
+/**
+ * How far off a suggestion may be before it is noise.
+ *
+ * Proportional to the name's length, so "Guam leaf" is not matched to
+ * "Grimy guam leaf" on four edits while a long name still tolerates a typo.
+ * Capped, because beyond a few edits it is a different item.
+ */
+export function suggestionLimit(name: string): number {
+  return Math.min(5, Math.max(2, Math.floor(name.length / 4)));
+}
+
+export function closestName(wanted: string, candidates: string[]): string | null {
+  const target = normaliseItemName(wanted);
+  const limit = suggestionLimit(target);
+
+  let best: string | null = null;
+  let bestDistance = Infinity;
+  for (const candidate of candidates) {
+    const d = editDistance(target, normaliseItemName(candidate));
+    if (d < bestDistance) {
+      bestDistance = d;
+      best = candidate;
+      if (d === 0) break;
+    }
+  }
+  return bestDistance <= limit ? best : null;
+}
