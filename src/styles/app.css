@@ -2128,3 +2128,131 @@ h2 .subtle {
 .dash-quiet {
   max-width: 70ch;
 }
+
+/* ------------------------------------------------------------------
+   Progress band and news, both on the overview.
+   ------------------------------------------------------------------ */
+.dash-progress {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+.dash-progress > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dash-progress strong {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.1;
+}
+.dash-sub {
+  font-size: 13px;
+  margin: var(--s-4) 0 var(--s-2);
+}
+.dash-levels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-2);
+}
+.dash-levels li {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr minmax(90px, auto);
+  align-items: center;
+  gap: var(--s-3);
+  font-size: 13px;
+}
+.dash-skill {
+  color: var(--text-2);
+}
+/* A bar, not a number alone: "4k to go" means nothing without knowing the
+   level is 30k wide. The figure stays beside it for anyone who wants it. */
+.dash-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--bg);
+  border: 1px solid var(--rule-soft);
+  overflow: hidden;
+}
+.dash-bar span {
+  display: block;
+  height: 100%;
+  background: var(--gold-dim);
+}
+
+.news-list {
+  list-style: none;
+  margin: var(--s-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-4);
+}
+.news-item {
+  border-left: 2px solid var(--rule);
+  padding-left: var(--s-3);
+}
+.news-item h3 {
+  margin: 2px 0 0;
+  font-size: 15px;
+}
+.news-item h3 a {
+  color: var(--text);
+  text-decoration: none;
+}
+.news-item h3 a:hover {
+  color: var(--gold);
+  text-decoration: underline;
+}
+.news-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+/* Labelled rather than separated: nobody should mistake an official patch
+   note for something written here. */
+.news-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+}
+.news-jagex {
+  border-left-color: var(--gold-dim);
+}
+.news-jagex .news-tag {
+  color: var(--gold);
+}
+.news-body {
+  margin: var(--s-2) 0 0;
+  font-size: 13px;
+  color: var(--text-2);
+  max-width: 74ch;
+  white-space: pre-wrap;
+}
+.news-actions {
+  display: inline-flex;
+  gap: var(--s-3);
+}
+.news-check {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--font-sans);
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+}
+.news-check input {
+  width: auto;
+  margin: 0;
+  flex: none;
+  accent-color: var(--gold);
+}

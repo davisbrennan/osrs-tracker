@@ -29,7 +29,7 @@ const MAX_ITEMS = 5000;
 /** Below this an item is not really trading. */
 const MIN_VOLUME = 1;
 
-const PAGES = ['', '/flips', '/items', '/unusual', '/money', '/privacy', '/terms'];
+const PAGES = ['', '/flips', '/items', '/unusual', '/money', '/news', '/privacy', '/terms'];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -39,7 +39,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: now,
     // The pages whose content moves with prices are worth recrawling daily;
     // the legal pages are not.
-    changeFrequency: ['', '/flips', '/items', '/money', '/unusual'].includes(path)
+    changeFrequency: ['', '/flips', '/items', '/money', '/unusual', '/news'].includes(path)
       ? 'daily'
       : 'monthly',
     priority:
@@ -47,7 +47,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ? 1
         : path === '/flips'
           ? 0.9
-          : ['/items', '/money', '/unusual'].includes(path)
+          : ['/items', '/money', '/unusual', '/news'].includes(path)
             ? 0.8
             : 0.6,
   }));

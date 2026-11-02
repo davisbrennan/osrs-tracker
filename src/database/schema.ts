@@ -380,3 +380,27 @@ export const osrsQuestProgress = pgTable(
   },
   (t) => [primaryKey({ columns: [t.accountId, t.questId] })]
 );
+
+/**
+ * Site posts and Jagex update headlines, in one feed. See
+ * drizzle/0010_news.sql for why they share a table.
+ */
+export const osrsNews = pgTable(
+  'osrs_news',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** site | jagex */
+    source: text('source').notNull().default('site'),
+    title: text('title').notNull(),
+    /** Site posts only; Jagex items carry a url instead. */
+    body: text('body'),
+    url: text('url'),
+    publishedAt: timestamp('published_at', { withTimezone: true }).notNull().defaultNow(),
+    externalId: text('external_id'),
+    authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
+    published: boolean('published').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('osrs_news_published_idx').on(t.publishedAt.desc())]
+);

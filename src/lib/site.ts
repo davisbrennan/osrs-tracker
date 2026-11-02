@@ -66,7 +66,7 @@ export type NavGroup = {
 };
 
 export const NAV_GROUPS: readonly NavGroup[] = [
-  { key: 'market', label: 'Market', items: ['items', 'unusual', 'money'] },
+  { key: 'market', label: 'Market', items: ['items', 'unusual', 'money', 'news'] },
   { key: 'trading', label: 'Trading', items: ['journal', 'watchlist', 'alerts'] },
   { key: 'character', label: 'Character', items: ['accounts', 'unlocks'] },
 ] as const;
@@ -77,6 +77,7 @@ export const NAV = [
   { href: '/items', label: 'Items', key: 'items', public: true },
   { href: '/unusual', label: 'Unusual', key: 'unusual', public: true },
   { href: '/money', label: 'Money makers', key: 'money', public: true },
+  { href: '/news', label: 'News', key: 'news', public: true },
   { href: '/unlocks', label: 'Unlocks', key: 'unlocks', public: false },
   { href: '/watchlist', label: 'Watchlist', key: 'watchlist', public: false },
   { href: '/alerts', label: 'Alerts', key: 'alerts', public: false },

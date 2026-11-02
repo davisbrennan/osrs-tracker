@@ -22,6 +22,10 @@ import {
   greeting,
   type Attention,
 } from '@/lib/osrs/dashboard';
+import { xpGained, nextLevels, activityHighlights, totalClues, spanLabel } from '@/lib/osrs/progress-stats';
+import { latestNews } from '@/app/actions/news';
+import { formatXp } from '@/lib/osrs/xp';
+import NewsFeed from '@/components/news-feed';
 import { gpExact, plClass } from '@/lib/gp';
 import AppShell from '@/components/app-shell';
 
@@ -129,17 +133,42 @@ export default async function Dashboard() {
   const accountId = accounts[0]?.id ?? null;
   const progress = accountId ? await progressFor(accountId) : null;
 
-  const [catalogue, hiscores] = await Promise.all([
+  const [catalogue, hiscores, news] = await Promise.all([
     loadMethodCatalogue(),
     accountId
       ? db
-          .select({ takenAt: osrsSnapshots.takenAt })
+          .select({
+            takenAt: osrsSnapshots.takenAt,
+            totalXp: osrsSnapshots.totalXp,
+            totalLevel: osrsSnapshots.totalLevel,
+            skills: osrsSnapshots.skills,
+            activities: osrsSnapshots.activities,
+          })
           .from(osrsSnapshots)
           .where(eq(osrsSnapshots.accountId, accountId))
           .orderBy(desc(osrsSnapshots.takenAt))
-          .limit(1)
+          // Enough history to find a baseline a week back without reading
+          // every snapshot ever taken.
+          .limit(60)
       : Promise.resolve([]),
+    latestNews(5),
   ]);
+
+  type SkillRow = { level: number; xp: number };
+  const snapshots = hiscores.map((h) => ({
+    takenAt: h.takenAt,
+    totalXp: Number(h.totalXp ?? 0),
+    totalLevel: h.totalLevel ?? 0,
+    skills: (h.skills ?? {}) as Record<string, SkillRow>,
+  }));
+
+  const week = xpGained(snapshots);
+  const climbing = nextLevels(snapshots[0]?.skills ?? {}, 3);
+  const acts = Array.isArray(hiscores[0]?.activities)
+    ? (hiscores[0].activities as { name: string; rank: number | null; score: number | null; kind: 'clue' | 'boss' | 'minigame' }[])
+    : [];
+  const bosses = activityHighlights(acts, 'boss', 3);
+  const clues = totalClues(acts);
 
   const levels = progress?.levels ?? new Map<string, number>();
   // rankMethods keys levels by display name; the planner keys by skill key.
@@ -319,6 +348,78 @@ export default async function Dashboard() {
           )}
         </article>
       </div>
+
+      {(week.xp !== null || climbing.length > 0 || bosses.length > 0 || clues !== null) && (
+        <section className="card">
+          <h2>Your week</h2>
+          <div className="dash-progress">
+            <div>
+              <span className="dash-label">XP gained</span>
+              {week.xp === null ? (
+                <>
+                  <strong>—</strong>
+                  <span className="subtle">
+                    not tracked long enough yet — this needs two syncs a few days apart
+                  </span>
+                </>
+              ) : (
+                <>
+                  <strong>{formatXp(week.xp)}</strong>
+                  <span className="subtle">
+                    over {spanLabel(week.overMs)}
+                    {week.bySkill[0] && <> · mostly {week.bySkill[0].skill}</>}
+                  </span>
+                </>
+              )}
+            </div>
+
+            {clues !== null && (
+              <div>
+                <span className="dash-label">Clue scrolls</span>
+                <strong>{clues.toLocaleString('en-US')}</strong>
+                <span className="subtle">completed</span>
+              </div>
+            )}
+
+            {bosses.length > 0 && (
+              <div>
+                <span className="dash-label">Most killed</span>
+                <strong>{bosses[0].score.toLocaleString('en-US')}</strong>
+                <span className="subtle">{bosses[0].name}</span>
+              </div>
+            )}
+          </div>
+
+          {climbing.length > 0 && (
+            <>
+              <h3 className="dash-sub">Closest level-ups</h3>
+              <ul className="dash-levels">
+                {climbing.map((l) => (
+                  <li key={l.skill}>
+                    <span className="dash-skill">
+                      {l.skill.charAt(0).toUpperCase() + l.skill.slice(1)} {l.next}
+                    </span>
+                    <span className="dash-bar" aria-hidden="true">
+                      <span style={{ width: `${Math.round(l.progressPct)}%` }} />
+                    </span>
+                    <span className="subtle">{formatXp(l.xpToGo)} to go</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      )}
+
+      {news.length > 0 && (
+        <section className="card">
+          <h2>What&rsquo;s new</h2>
+          <NewsFeed items={news} compact />
+          <Link href="/news" className="dash-more">
+            All news
+          </Link>
+        </section>
+      )}
 
       {portfolio.positions.length > 0 && (
         <section className="card">

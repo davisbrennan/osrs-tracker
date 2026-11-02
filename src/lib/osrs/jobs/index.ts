@@ -13,6 +13,7 @@ import { checkAlerts } from '@/lib/osrs/jobs/check-alerts';
 import { syncWiki } from '@/lib/osrs/jobs/sync-wiki';
 import { rollupDaily, pruneDaily } from '@/lib/osrs/jobs/rollup-daily';
 import { backfillHistory } from '@/lib/osrs/jobs/backfill-history';
+import { syncNews } from '@/lib/osrs/jobs/sync-news';
 import { pruneJobRuns } from '@/lib/osrs/jobs/record';
 import type { JobResult } from '@/lib/osrs/jobs/util';
 
@@ -23,7 +24,8 @@ export type JobName =
   | 'prune-history'
   | 'sync-wiki'
   | 'rollup-daily'
-  | 'backfill-history';
+  | 'backfill-history'
+  | 'sync-news';
 
 export type JobDefinition = {
   /** How often to run it, in milliseconds. */
@@ -101,6 +103,16 @@ export const JOBS: Record<JobName, JobDefinition> = {
     run: () => backfillHistory(),
   },
 
+  // A handful of posts a week. Nobody needs a patch note within five
+  // minutes, and hammering someone else's feed for news that changes twice
+  // a week is rude.
+  'sync-news': {
+    everyMs: 6 * HOUR,
+    initialDelayMs: 2 * 60_000,
+    description: 'Fetch headlines from the official Old School news feed.',
+    run: () => syncNews(),
+  },
+
   'prune-history': {
     everyMs: 24 * HOUR,
     initialDelayMs: 5 * MINUTE,
@@ -128,4 +140,5 @@ export {
   pruneDaily,
   backfillHistory,
   pruneJobRuns,
+  syncNews,
 };
