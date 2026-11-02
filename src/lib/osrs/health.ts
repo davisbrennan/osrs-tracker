@@ -258,6 +258,70 @@ export function gradeBuild(facts: { app: string; worker: string | null }): Check
   return { ...base, status: 'ok', detail: `Both on ${facts.app}.` };
 }
 
+/**
+ * Disk.
+ *
+ * A full disk is the failure that takes everything down at once and gives
+ * no warning of its own: Postgres stops accepting writes, the app falls
+ * over, and the site goes dark. It is also entirely predictable — the
+ * database grows every day and each deploy leaves a dump behind — so a
+ * health page that does not watch it is missing the one outage it could
+ * genuinely have prevented.
+ *
+ * Warns with room to act, not once it is too late. At 90% of a 40GB disk
+ * there are still four gigabytes and days of notice; at 97% the next big
+ * write is the one that fails.
+ */
+export const DISK_WARN_PCT = 85;
+export const DISK_FAIL_PCT = 95;
+
+export function gradeDisk(facts: { total: number | null; free: number | null }): Check {
+  const base = { id: 'disk', title: 'Disk space' };
+
+  if (facts.total === null || facts.free === null || facts.total <= 0) {
+    return {
+      ...base,
+      status: 'unknown',
+      detail: 'Could not read disk usage from this container.',
+    };
+  }
+
+  const usedPct = Math.round(((facts.total - facts.free) / facts.total) * 100);
+  const freeLabel = humanBytes(facts.free);
+  const totalLabel = humanBytes(facts.total);
+
+  if (usedPct >= DISK_FAIL_PCT) {
+    return {
+      ...base,
+      status: 'fail',
+      detail: `${usedPct}% full — only ${freeLabel} left of ${totalLabel}. Postgres stops accepting writes when this runs out, which takes the whole site down.`,
+      fix: 'Old pre-deploy database dumps are the usual cause: one is written on every deploy and they are never cleaned up automatically.',
+      command: 'du -sh /srv/osrs/backups && ls -t /srv/osrs/backups | tail -n +6 | xargs -I{} rm /srv/osrs/backups/{}',
+    };
+  }
+
+  if (usedPct >= DISK_WARN_PCT) {
+    return {
+      ...base,
+      status: 'warn',
+      detail: `${usedPct}% full — ${freeLabel} left of ${totalLabel}.`,
+      fix: 'Still room, but this only goes one way: the database grows daily and every deploy leaves a dump behind. Worth clearing old dumps now rather than at 100%.',
+      command: 'du -sh /srv/osrs/backups',
+    };
+  }
+
+  return { ...base, status: 'ok', detail: `${usedPct}% full — ${freeLabel} free of ${totalLabel}.` };
+}
+
+/** Bytes as a person reads them. */
+export function humanBytes(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.min(units.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
+  const v = n / 1024 ** i;
+  return `${v >= 10 || i === 0 ? Math.round(v) : v.toFixed(1)} ${units[i]}`;
+}
+
 /* ------------------------------------------------------------------ */
 /* Feature checks                                                      */
 /* ------------------------------------------------------------------ */

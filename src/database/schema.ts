@@ -364,3 +364,19 @@ export const osrsJobRuns = pgTable(
   },
   (t) => [index('osrs_job_runs_job_started_idx').on(t.job, t.startedAt.desc())]
 );
+
+/**
+ * Quests an account has finished. See drizzle/0009_quest_progress.sql for
+ * why this is set by hand rather than synced.
+ */
+export const osrsQuestProgress = pgTable(
+  'osrs_quest_progress',
+  {
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => osrsAccounts.id, { onDelete: 'cascade' }),
+    questId: text('quest_id').notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.accountId, t.questId] })]
+);

@@ -28,10 +28,12 @@ import {
   gradeHistory,
   gradeAlerts,
   gradeBuild,
+  gradeDisk,
   type Check,
   type JobRun,
 } from '@/lib/osrs/health';
 import { buildSha } from '@/lib/osrs/jobs/record';
+import { storage } from '@/lib/admin-stats';
 
 /** Turns whatever the driver hands back into a Date, or null. */
 function asDate(v: unknown): Date | null {
@@ -231,6 +233,15 @@ async function historyCheck(): Promise<Check> {
   }
 }
 
+async function diskCheck(): Promise<Check> {
+  try {
+    const s = await storage();
+    return gradeDisk({ total: s.diskTotal, free: s.diskFree });
+  } catch (e) {
+    return unknownCheck('disk', 'Disk space', String(e).slice(0, 120));
+  }
+}
+
 async function alertsCheck(): Promise<Check> {
   try {
     const rows = rowsOf<Record<string, unknown>>(
@@ -260,12 +271,13 @@ export async function healthReport(now: Date = new Date()): Promise<HealthReport
 
   // Gathered in parallel: this page is read when something is wrong, and
   // six sequential round trips is a page that feels broken too.
-  const [catalogue, methods, wiki, history, alerts] = await Promise.all([
+  const [catalogue, methods, wiki, history, alerts, disk] = await Promise.all([
     catalogueCheck(),
     methodsCheck(),
     wikiCheck(runs),
     historyCheck(),
     alertsCheck(),
+    diskCheck(),
   ]);
 
   // Whichever build most recently wrote a run is the one the worker is on.
@@ -280,7 +292,7 @@ export async function healthReport(now: Date = new Date()): Promise<HealthReport
 
   return {
     jobs,
-    features: [catalogue, methods, wiki, history, alerts, build],
+    features: [disk, catalogue, methods, wiki, history, alerts, build],
     noRunsRecorded: runs.size === 0,
   };
 }

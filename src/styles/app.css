@@ -1799,3 +1799,332 @@ h2 .subtle {
 .item-actions .watch-btn {
   text-decoration: none;
 }
+
+/* ------------------------------------------------------------------
+   Unlock planner.
+
+   The step list is the whole page, so it gets the weight and the goal
+   chips stay quiet. Status is carried by a mark and a word as well as a
+   colour — the same rule as the health page, and for the same reason:
+   this gets screenshotted and pasted into Discord.
+   ------------------------------------------------------------------ */
+.ul-goals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: var(--s-4) 0;
+}
+.ul-goal {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4);
+  text-decoration: none;
+  min-width: 180px;
+}
+.ul-goal:hover {
+  border-color: var(--gold-dim);
+}
+.ul-goal.on {
+  border-color: var(--gold-dim);
+  background: var(--bg);
+}
+.ul-goal.ul-got {
+  opacity: 0.65;
+}
+.ul-goal-name {
+  display: block;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 14px;
+}
+.ul-goal-left {
+  display: block;
+  color: var(--dim);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.ul-plan h2 {
+  margin-top: 0;
+}
+.ul-blurb {
+  color: var(--text-2);
+  max-width: 70ch;
+}
+.ul-summary {
+  background: var(--bg);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--r-sm);
+  padding: var(--s-3) var(--s-4);
+  color: var(--text-2);
+  max-width: 70ch;
+}
+.ul-summary strong {
+  color: var(--text);
+}
+
+.ul-steps {
+  list-style: none;
+  margin: var(--s-4) 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-2);
+}
+.ul-step {
+  border: 1px solid var(--rule);
+  border-left-width: 3px;
+  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4);
+  background: var(--panel);
+}
+.ul-step-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+.ul-mark {
+  font-family: var(--font-mono);
+  flex: none;
+  width: 1em;
+}
+.ul-step-name {
+  font-weight: 600;
+  color: var(--text);
+}
+.ul-status {
+  color: var(--dim);
+  font-size: 12px;
+}
+.ul-partial {
+  margin-left: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  background: var(--bg);
+  border-radius: var(--r-sm);
+  padding: 1px 6px;
+  font-weight: 400;
+}
+.ul-note,
+.ul-why,
+.ul-items {
+  margin: var(--s-2) 0 0;
+  font-size: 13px;
+  color: var(--text-2);
+  max-width: 72ch;
+}
+.ul-items {
+  color: var(--dim);
+  font-size: 12px;
+}
+.ul-gap {
+  display: inline-block;
+  margin-right: var(--s-3);
+}
+.ul-boost {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--gold);
+}
+.ul-also {
+  color: var(--text-2);
+  font-size: 13px;
+  max-width: 72ch;
+}
+.ul-also strong {
+  color: var(--text);
+}
+
+/* Status colours sit on the left rule only, so a long list still reads as
+   one list rather than a stack of coloured boxes. */
+.ul-done {
+  border-left-color: var(--profit);
+  opacity: 0.7;
+}
+.ul-ready {
+  border-left-color: var(--gold);
+  background: var(--bg);
+}
+.ul-blocked {
+  border-left-color: var(--rule);
+}
+
+.ul-ticks {
+  list-style: none;
+  margin: var(--s-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-1);
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+.ul-ticks label {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  color: var(--text-2);
+  font-size: 13px;
+  /* The planner styles bare labels as mono micro-labels; this is a control
+     label, not a field caption. */
+  font-family: var(--font-sans);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.ul-ticks label:hover {
+  background: var(--panel-2);
+}
+.ul-ticks label.on {
+  color: var(--text);
+}
+.ul-ticks input {
+  width: auto;
+  margin: 0;
+  flex: none;
+  /* Default checkboxes render in the browser's blue, which is the one
+     colour on the page that belongs to no part of this palette. */
+  accent-color: var(--gold);
+}
+
+/* ------------------------------------------------------------------
+   The signed-in overview.
+
+   Three bands with falling weight: where you stand, what needs you, what
+   is worth doing. The middle one is loudest when it has anything in it
+   and absent when it does not — the page is meant to be mostly quiet, so
+   nothing here reserves space for a problem that is not there.
+   ------------------------------------------------------------------ */
+.dash-standing {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--s-4);
+  margin: var(--s-4) 0 var(--s-6);
+  padding-bottom: var(--s-4);
+  border-bottom: 1px solid var(--rule);
+}
+.dash-standing > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dash-standing strong {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1.1;
+}
+.dash-label {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.dash-needs {
+  margin: 0 0 var(--s-6);
+}
+.dash-needs h2 {
+  margin-bottom: var(--s-3);
+}
+.dash-needs ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-2);
+}
+.dash-att a {
+  display: block;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--rule);
+  border-left-width: 3px;
+  border-radius: var(--r-md);
+  background: var(--panel);
+  text-decoration: none;
+}
+.dash-att a:hover {
+  border-color: var(--gold-dim);
+}
+.dash-att strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+}
+.dash-att span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-2);
+  font-size: 13px;
+  max-width: 74ch;
+}
+/* Applied as dash-${level}, so the extractor cannot see these. */
+.dash-warn a {
+  border-left-color: var(--loss);
+  background: var(--loss-wash);
+}
+.dash-info a {
+  border-left-color: var(--gold);
+}
+
+.dash-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(265px, 1fr));
+  gap: var(--s-3);
+  margin: var(--s-3) 0 var(--s-6);
+}
+.dash-card {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.dash-card h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.dash-card h3 a {
+  color: var(--text);
+  text-decoration: none;
+}
+.dash-card h3 a:hover {
+  color: var(--gold);
+}
+.dash-card p {
+  margin: 0;
+}
+.dash-kicker {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+}
+.dash-figure {
+  font-family: var(--font-mono);
+  font-size: 19px;
+}
+.dash-figure .subtle {
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
+.dash-more {
+  margin-top: auto;
+  padding-top: var(--s-2);
+  font-size: 12px;
+  color: var(--dim);
+}
+.dash-more:hover {
+  color: var(--gold);
+}
+.dash-quiet {
+  max-width: 70ch;
+}

@@ -135,35 +135,30 @@ a:hover {
   color: var(--text);
 }
 
-.gear {
-  color: var(--dim);
-  display: inline-flex;
+/* Settings moved out of the masthead and into the nav with a visible
+   label. It was an unlabelled gear, which is exactly the control nobody
+   can find — a tooltip does not help on a phone, and an aria-label helps
+   only the people using a screen reader. */
+.tab-settings {
   flex: none;
-}
-.gear svg {
-  width: 17px;
-  height: 17px;
-}
-.gear:hover,
-.gear.on {
-  color: var(--gold);
 }
 
 /* ============================================================
    Tabs
    ============================================================ */
 
+/* No overflow-x here any more, and that is load-bearing rather than
+   tidying: an absolutely-positioned dropdown cannot escape a scroll
+   container, so the menus rendered into the DOM and were clipped to
+   invisibility. Scrolling existed for nine tabs; with four it can wrap
+   instead, which is better on a phone anyway. */
 .tabs {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--s-1);
   border-bottom: 1px solid var(--rule);
   margin-bottom: var(--s-5);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.tabs::-webkit-scrollbar {
-  display: none;
 }
 
 .tabs a {
@@ -301,4 +296,121 @@ h2 {
 }
 .sync-strip.overdue .sync-note {
   color: var(--loss);
+}
+
+
+/* ------------------------------------------------------------------
+   Grouped nav menus.
+
+   Nine flat tabs scanned badly and wrapped worse. The trigger is styled
+   as a tab so a group reads as a peer of the direct links rather than as
+   a different kind of control, and it carries the active underline when
+   the current page is inside it — otherwise opening a menu to find where
+   you already are is the only way to know.
+   ------------------------------------------------------------------ */
+.navmenu {
+  position: relative;
+  flex: none;
+}
+
+.navmenu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--s-3) var(--s-3);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--dim);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  /* base.css styles bare buttons as filled controls; a nav trigger is not
+     one, and inheriting that turned the whole row into a button bar. */
+  width: auto;
+  border-radius: 0;
+  text-transform: none;
+  letter-spacing: normal;
+  margin-top: 0;
+  align-self: auto;
+  transition: none;
+}
+/* Matching base.css's `button:hover:not(:disabled)` specificity, because a
+   plain `.navmenu-btn:hover` loses to it and the trigger filled in gold. */
+.navmenu-btn:hover:not(:disabled) {
+  background: none;
+  border-color: transparent;
+  color: var(--text);
+}
+.navmenu-btn.on:hover:not(:disabled) {
+  border-bottom-color: var(--gold);
+}
+.navmenu-btn.on {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+.navmenu-btn[aria-expanded='true'] {
+  color: var(--text);
+}
+
+.navmenu-caret {
+  width: 9px;
+  height: 6px;
+  flex: none;
+  transition: transform 120ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .navmenu-caret {
+    transition: none;
+  }
+}
+.navmenu-btn[aria-expanded='true'] .navmenu-caret {
+  transform: rotate(180deg);
+}
+
+.navmenu-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 40;
+  min-width: 190px;
+  margin-top: 1px;
+  padding: var(--s-1);
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+}
+
+/* These are inside .tabs, which styles its own anchors as tabs — so the
+   menu's links need their tab styling undone rather than extended. */
+.navmenu-list a {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-bottom: none;
+  margin-bottom: 0;
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  font-size: 13px;
+}
+.navmenu-list a:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+.navmenu-list a[aria-current='page'] {
+  color: var(--gold);
+  border-bottom-color: transparent;
+  background: var(--bg);
+}
+.navmenu-list a svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
 }

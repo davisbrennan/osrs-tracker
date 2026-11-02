@@ -19,6 +19,8 @@ const {
   gradeHistory,
   gradeAlerts,
   gradeBuild,
+  gradeDisk,
+  humanBytes,
   overallStatus,
   countByStatus,
   lateAfterMs,
@@ -362,6 +364,40 @@ console.log('\nAlerts with no email key is the worst combination');
   // everything else it says.
   const one = gradeAlerts({ active: 1, emailConfigured: true }) as Check;
   ok('1 alert reads as singular', one.detail.includes('1 active alert,'), one.detail);
+}
+
+console.log('\nDisk is watched with room left to act on it');
+{
+  const GB = 1024 ** 3;
+
+  // The point is to warn while there is still time. At 100% there is no
+  // advice left to give — Postgres has already stopped accepting writes.
+  const healthy = gradeDisk({ total: 40 * GB, free: 20 * GB }) as Check;
+  eq('half full → ok', healthy.status, 'ok');
+
+  const tight = gradeDisk({ total: 40 * GB, free: 4 * GB }) as Check;
+  eq('90% full → warn', tight.status, 'warn');
+  ok('says how much is left', tight.detail.includes('4.0 GB'), tight.detail);
+  ok('and that it only goes one way', (tight.fix ?? '').includes('only goes one way'), tight.fix);
+
+  const critical = gradeDisk({ total: 40 * GB, free: 1 * GB }) as Check;
+  eq('97% full → fail', critical.status, 'fail');
+  ok('names the consequence', critical.detail.includes('whole site down'), critical.detail);
+  ok('and blames the dumps, which is the usual cause', (critical.fix ?? '').includes('dumps'), critical.fix);
+
+  // Exactly on a boundary must not read as fine.
+  eq('exactly 85% → warn', (gradeDisk({ total: 100, free: 15 }) as Check).status, 'warn');
+  eq('exactly 95% → fail', (gradeDisk({ total: 100, free: 5 }) as Check).status, 'fail');
+  eq('84% → ok', (gradeDisk({ total: 100, free: 16 }) as Check).status, 'ok');
+
+  // Unreadable is unknown, never a pass.
+  eq('no reading → unknown', (gradeDisk({ total: null, free: null }) as Check).status, 'unknown');
+  eq('a zero-size disk → unknown', (gradeDisk({ total: 0, free: 0 }) as Check).status, 'unknown');
+
+  eq('bytes read as people write them', humanBytes(4 * GB), '4.0 GB');
+  eq('small values stay in bytes', humanBytes(512), '512 B');
+  eq('nothing is nothing', humanBytes(0), '0 B');
+  eq('negative is nothing, not "-1 B"', humanBytes(-5), '0 B');
 }
 
 console.log('\nThe worker running an older build than the site is a failure');

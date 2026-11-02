@@ -40,11 +40,44 @@ export const SOCIAL_CARD = {
  * flip finder and item pages get indexed. Only routes that exist are listed;
  * a nav entry pointing at an unbuilt page is a 404 waiting to happen.
  */
+/**
+ * How the nav is grouped.
+ *
+ * Nine flat tabs was too many to scan and wrapped badly on a phone. The
+ * split follows what you are actually doing rather than how the app is
+ * built: MARKET is public data about items, TRADING is your own trading
+ * activity, CHARACTER is your account's progress.
+ *
+ * The flip finder stays a direct link rather than going into Market. It is
+ * the front door and the page most people arrive on, and putting the main
+ * thing two clicks away to tidy a menu is a bad trade.
+ *
+ * Every key in NAV must appear here exactly once — a key omitted would make
+ * that page unreachable from the menu while still existing, which is the
+ * silent failure this grouping could introduce. `npm run check:nav` enforces
+ * it.
+ */
+export const NAV_DIRECT = ['dashboard', 'flips'] as const;
+
+export type NavGroup = {
+  key: string;
+  label: string;
+  items: readonly NavKey[];
+};
+
+export const NAV_GROUPS: readonly NavGroup[] = [
+  { key: 'market', label: 'Market', items: ['items', 'unusual', 'money'] },
+  { key: 'trading', label: 'Trading', items: ['journal', 'watchlist', 'alerts'] },
+  { key: 'character', label: 'Character', items: ['accounts', 'unlocks'] },
+] as const;
+
 export const NAV = [
+  { href: '/dashboard', label: 'Overview', key: 'dashboard', public: false },
   { href: '/flips', label: 'Flip finder', key: 'flips', public: true },
   { href: '/items', label: 'Items', key: 'items', public: true },
   { href: '/unusual', label: 'Unusual', key: 'unusual', public: true },
   { href: '/money', label: 'Money makers', key: 'money', public: true },
+  { href: '/unlocks', label: 'Unlocks', key: 'unlocks', public: false },
   { href: '/watchlist', label: 'Watchlist', key: 'watchlist', public: false },
   { href: '/alerts', label: 'Alerts', key: 'alerts', public: false },
   { href: '/accounts', label: 'Accounts', key: 'accounts', public: false },
@@ -120,6 +153,8 @@ export const FAQS = [
  * a crawler reads robots.txt and never fetches the page at all.
  */
 export const NOINDEX_PATHS = [
+  '/unlocks',
+  '/dashboard',
   '/admin',
   '/settings',
   '/signin',

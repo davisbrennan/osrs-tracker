@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { appSettings } from '@/lib/app-settings';
-import { NAV, SITE, type NavKey } from '@/lib/site';
+import { NAV, NAV_GROUPS, NAV_DIRECT, SITE, type NavKey } from '@/lib/site';
+import NavMenu from './nav-menu';
 import SignOut from './sign-out';
 import CashStack from './cash-stack';
 import { lastPriceSync } from '@/lib/osrs/last-sync';
@@ -63,6 +64,21 @@ const ICONS: Record<string, React.ReactElement> = {
       <path d="M3 2.5v12M5.5 6h4M5.5 9h4" />
     </svg>
   ),
+  dashboard: (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <rect x="2" y="2.5" width="5" height="5" rx="1" />
+      <rect x="9" y="2.5" width="5" height="5" rx="1" />
+      <rect x="2" y="9" width="5" height="4.5" rx="1" />
+      <rect x="9" y="9" width="5" height="4.5" rx="1" />
+    </svg>
+  ),
+  unlocks: (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <circle cx="5.25" cy="10.75" r="2.75" />
+      <path d="m7.4 9 5.1-5.1" />
+      <path d="M10.6 5.8 12.1 7.3M12.5 3.9 14 5.4" />
+    </svg>
+  ),
   settings: (
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
       <circle cx="8" cy="8" r="2.4" />
@@ -110,6 +126,26 @@ export default async function AppShell({
     );
   }
 
+  // What this visitor can actually see. A group with nothing visible in it
+  // is dropped rather than rendered as an empty menu.
+  const visible = NAV.filter((t) => t.public || signedIn);
+  const byKey = new Map(visible.map((t) => [t.key as string, t]));
+  const direct = NAV_DIRECT.map((k) => byKey.get(k)).filter((t): t is NonNullable<typeof t> => Boolean(t));
+
+  const groups = NAV_GROUPS.map((g) => ({
+    key: g.key,
+    label: g.label,
+    items: g.items
+      .map((key) => byKey.get(key))
+      .filter((t): t is NonNullable<typeof t> => Boolean(t))
+      .map((t) => ({
+        key: t.key as string,
+        href: t.href as string,
+        label: t.label as string,
+        icon: ICONS[t.key] ?? null,
+      })),
+  })).filter((g) => g.items.length > 0);
+
   return (
     <div className="shell page-wrap">
       {settings.banner && (
@@ -128,26 +164,44 @@ export default async function AppShell({
             depends on in a settings screen would be the wrong place. */}
         <CashStack value={cashStack} signedIn={signedIn} />
 
-        {signedIn && (
-          <Link
-            href="/settings"
-            className={`gear${current === 'settings' ? ' on' : ''}`}
-            aria-label="Settings"
-            title="Settings"
-          >
-            {ICONS.settings}
-          </Link>
-        )}
       </header>
 
       <nav className="tabs">
-        {NAV.filter((t) => t.public || signedIn).map((t) => (
-          <Link key={t.key} href={t.href} aria-current={current === t.key ? 'page' : undefined}>
+        {/* The flip finder stays a direct link: it is the page most people
+            arrive on, and hiding it to tidy a menu would cost more than the
+            tidying is worth. */}
+        {direct.map((t) => (
+          <Link
+            key={t.key}
+            href={t.href}
+            aria-current={current === t.key ? 'page' : undefined}
+          >
             {ICONS[t.key]}
             {t.label}
           </Link>
         ))}
+
+        {groups.map((group) => (
+          <NavMenu
+            key={group.key}
+            label={group.label}
+            items={group.items}
+            activeKey={current}
+          />
+        ))}
+
         <span className="tabs-spacer" />
+
+        {signedIn && (
+          <Link
+            href="/settings"
+            className="tab-settings"
+            aria-current={current === 'settings' ? 'page' : undefined}
+          >
+            {ICONS.settings}
+            Settings
+          </Link>
+        )}
         {signedIn ? (
           <SignOut />
         ) : (
