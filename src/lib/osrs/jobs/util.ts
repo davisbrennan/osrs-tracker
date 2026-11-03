@@ -45,14 +45,31 @@ export function sleep(ms: number): Promise<void> {
 export type JobResult = Record<string, unknown>;
 
 /**
- * Postgres int4 bounds. `high` and `low` are integer columns, so a value
- * outside this range does not round or clamp — it aborts the statement.
+ * Postgres int4 bounds. No price column uses int4 any more (see migration
+ * 0011), but the constants stay: item ids, quantities and volumes are still
+ * int4, and the numbers are worth having named.
  */
 export const INT4_MIN = -2_147_483_648;
 export const INT4_MAX = 2_147_483_647;
 
 /**
- * A value an integer column will actually accept, or null.
+ * The ceiling that actually binds the gp columns.
+ *
+ * They are int8 now, whose range is ±9.2 x 10^18 — far past what JavaScript
+ * can hold exactly. Drizzle reads them with `mode: 'number'`, so anything
+ * above Number.MAX_SAFE_INTEGER would come back with the last digits
+ * quietly wrong. A price we cannot round-trip is not a price we should
+ * store, so the safe-integer boundary is the real limit, not int8's.
+ *
+ * In practice this is ~4 million times the max cash stack. Nothing the
+ * Grand Exchange can report comes near it; the guard is here for corrupt
+ * upstream data, which is what it was always catching.
+ */
+export const GP_MAX = Number.MAX_SAFE_INTEGER;
+export const GP_MIN = -Number.MAX_SAFE_INTEGER;
+
+/**
+ * A value a gp column will actually accept, or null.
  *
  * Null rather than clamped, deliberately. Clamping 3,000,000,000 to
  * 2,147,483,647 would publish a wrong price that looks entirely plausible
@@ -64,12 +81,17 @@ export const INT4_MAX = 2_147_483_647;
  * item on the site. Four thousand good prices should not be lost to one bad
  * one, and the count comes back in the job result so it is visible rather
  * than silent.
+ *
+ * It was bounded at int4 until v25, which was correct for the column type
+ * and wrong for the game: the Grand Exchange quotes a handful of items above
+ * a single max cash stack, so the guard was nulling real prices and those
+ * items disappeared from the catalogue rather than showing as unpriced.
  */
 export function safeInt(v: number | null | undefined): number | null {
   if (v === null || v === undefined) return null;
   if (!Number.isFinite(v)) return null;
   const n = Math.trunc(v);
-  return n < INT4_MIN || n > INT4_MAX ? null : n;
+  return n < GP_MIN || n > GP_MAX ? null : n;
 }
 
 /**

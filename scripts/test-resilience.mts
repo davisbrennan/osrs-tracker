@@ -56,8 +56,11 @@ console.log('\nPostgres really does lose the whole batch for one bad value');
 {
   let threw = false;
   try {
-    // 3,000,000,000 does not fit int4. The other two rows are perfect.
-    await upsert([row(IDS[0], 100), row(IDS[1], 3_000_000_000), row(IDS[2], 300)]);
+    // Past int8, so Postgres refuses it. 3,000,000,000 used to serve here,
+    // but the gp columns are bigint as of 0011 and that is now an ordinary
+    // price — a 3rd age item really does trade above a max cash stack.
+    // The batch-survival property is unchanged; only the unstorable value is.
+    await upsert([row(IDS[0], 100), row(IDS[1], 1e19), row(IDS[2], 300)]);
   } catch {
     threw = true;
   }
@@ -70,7 +73,7 @@ console.log('\nPostgres really does lose the whole batch for one bad value');
 
 console.log('\nRow-by-row retry keeps the good ones');
 {
-  const batch = [row(IDS[0], 100), row(IDS[1], 3_000_000_000), row(IDS[2], 300)];
+  const batch = [row(IDS[0], 100), row(IDS[1], 1e19), row(IDS[2], 300)];
   let written = 0;
   let rejected = 0;
   try {
@@ -97,7 +100,7 @@ console.log('\nsafeInt would have prevented it in the first place');
   await db.delete(osrsPrices).where(inArray(osrsPrices.itemId, IDS));
   const batch = [
     row(IDS[0], 100),
-    { ...row(IDS[1], 0), high: safeInt(3_000_000_000) },
+    { ...row(IDS[1], 0), high: safeInt(1e19) },
     row(IDS[2], 300),
   ];
   await upsert(batch as never);
@@ -105,7 +108,7 @@ console.log('\nsafeInt would have prevented it in the first place');
   const rows = ((got as unknown as { rows?: { item_id: number; high: number | null }[] }).rows ?? []);
   eq('all three rows land', rows.length, 3);
   eq('the bad price is stored as unknown', rows[1].high, null);
-  ok('not clamped to the int4 ceiling', rows[1].high !== 2_147_483_647);
+  ok('not clamped to any ceiling', rows[1].high !== 2_147_483_647);
 }
 
 console.log('\nA duplicate id in one batch is what 21000 looks like');

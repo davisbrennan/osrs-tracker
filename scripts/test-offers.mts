@@ -87,6 +87,45 @@ console.log('\nThe band on a real flip');
   ok('one gp under it does not', marginPerUnit(o.buyAt, o.minSell - 1) <= 0);
 }
 
+console.log('\nThe 5m tax cap, which is where the breakeven used to be wrong');
+{
+  // Above 250m the cap binds, so the tax STOPS scaling and the breakeven
+  // sell price is just buy + 5m + 1 — far below the 2% estimate. The old
+  // breakeven walked up from buyPrice/0.98 and never down, so on this item
+  // it claimed 8,753,061,224 when the true floor is 8,583,000,001: about
+  // 170m of undercut room silently deleted.
+  const o = suggestOffers({ low: 8_578_000_000, high: 8_778_000_000 })!;
+  eq('tax is the cap', o.tax, 5_000_000);
+  eq('margin', o.margin, 195_000_000);
+  eq('accept no less than', o.minSell, 8_583_000_001);
+  eq('which is the cap plus a gp', o.minSell - o.buyAt, 5_000_001);
+  ok('and that is far below the 2% estimate',
+    o.minSell < Math.floor(o.buyAt / 0.98), `${o.minSell} < ${Math.floor(o.buyAt / 0.98)}`);
+  ok('it still pays', marginPerUnit(o.buyAt, o.minSell) > 0);
+  ok('and a gp less does not', marginPerUnit(o.buyAt, o.minSell - 1) <= 0);
+}
+
+console.log('\nThe breakeven is the LOWEST price that pays, at every scale');
+{
+  // The bug above survived because the old answer was profitable, just not
+  // minimal. Profitability alone is not the property — minimality is.
+  let bad = 0;
+  const probes = [50, 51, 100, 1_000, 1_000_000, 249_999_999, 250_000_000,
+    250_000_001, 2_147_483_647, 8_578_000_000];
+  for (let p = 50; p < 20_000_000_000; p = Math.ceil(p * 1.6)) probes.push(p);
+  for (const buy of probes) {
+    if (marginPerUnit(buy, breakevenSellPrice(buy)) <= 0) bad++;
+    if (marginPerUnit(buy, breakevenSellPrice(buy) - 1) > 0) bad++;
+  }
+  eq(`no breakeven across ${probes.length} prices is off by a gp`, bad, 0);
+
+  // The 49 case: "under 50 is untaxed so sell for one more" is wrong,
+  // because the SALE at 50 is taxed and nets 49 exactly.
+  eq('buy 49 breaks even at 51, not 50', breakevenSellPrice(49), 51);
+  ok('selling at 50 really does not pay', marginPerUnit(49, 50) <= 0);
+  eq('buy 48 is genuinely untaxed both ways', breakevenSellPrice(48), 49);
+}
+
 console.log('\nA spread that looks like profit and is not');
 {
   // The whole thesis of the site. Buy 100, sell 101 loses a gp once the

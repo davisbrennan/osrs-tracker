@@ -150,9 +150,11 @@ export const osrsItems = pgTable('osrs_items', {
   members: boolean('members').notNull().default(false),
   // GE buy limit per 4 hours. Null means the wiki publishes none.
   buyLimit: integer('buy_limit'),
-  value: integer('value'),
-  highalch: integer('highalch'),
-  lowalch: integer('lowalch'),
+  // bigint, not integer: the mapping payload carries values above the
+  // int4 ceiling for the very top end of the game. See 0011.
+  value: bigint('value', { mode: 'number' }),
+  highalch: bigint('highalch', { mode: 'number' }),
+  lowalch: bigint('lowalch', { mode: 'number' }),
   icon: text('icon'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -166,9 +168,12 @@ export const osrsPrices = pgTable('osrs_prices', {
   // "high" is the instant-buy price (what you sell into); "low" is the
   // instant-sell price (what you buy at). The wiki's own naming, kept so
   // there is no translation layer to get backwards.
-  high: integer('high'),
+  // bigint: the Grand Exchange quotes items above a single max cash
+  // stack (int4's ceiling), and an int4 column made those items vanish
+  // from the catalogue rather than merely clip. See migration 0011.
+  high: bigint('high', { mode: 'number' }),
   highTime: timestamp('high_time', { withTimezone: true }),
-  low: integer('low'),
+  low: bigint('low', { mode: 'number' }),
   lowTime: timestamp('low_time', { withTimezone: true }),
   hourlyVolume: bigint('hourly_volume', { mode: 'number' }).notNull().default(0),
   fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
@@ -184,8 +189,8 @@ export const osrsPriceHistory = pgTable(
       .notNull()
       .references(() => osrsItems.id, { onDelete: 'cascade' }),
     ts: timestamp('ts', { withTimezone: true }).notNull(),
-    avgHigh: integer('avg_high'),
-    avgLow: integer('avg_low'),
+    avgHigh: bigint('avg_high', { mode: 'number' }),
+    avgLow: bigint('avg_low', { mode: 'number' }),
     highVolume: bigint('high_volume', { mode: 'number' }),
     lowVolume: bigint('low_volume', { mode: 'number' }),
   },
@@ -305,8 +310,8 @@ export const osrsPriceDaily = pgTable(
       .references(() => osrsItems.id, { onDelete: 'cascade' }),
     /** Midnight UTC, stored as a date so a day cannot be recorded twice. */
     day: date('day').notNull(),
-    avgHigh: integer('avg_high'),
-    avgLow: integer('avg_low'),
+    avgHigh: bigint('avg_high', { mode: 'number' }),
+    avgLow: bigint('avg_low', { mode: 'number' }),
     /** Both sides summed. */
     volume: bigint('volume', { mode: 'number' }).notNull().default(0),
   },

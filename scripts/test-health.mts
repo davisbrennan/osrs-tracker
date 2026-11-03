@@ -33,7 +33,9 @@ const {
 const { JOBS } = await import('@/lib/osrs/jobs');
 const { errorMessage } = await import('@/lib/osrs/jobs/record');
 const { MIN_SAMPLE_DAYS } = await import('@/lib/osrs/stats');
-const { safeInt, safeDate, INT4_MAX, INT4_MIN } = await import('@/lib/osrs/jobs/util');
+const { safeInt, safeDate, INT4_MAX, INT4_MIN, GP_MAX, GP_MIN } =
+  await import('@/lib/osrs/jobs/util');
+const { geTax, marginPerUnit } = await import('@/lib/osrs/ge');
 const { editDistance, closestName, normaliseItemName } = await import('@/lib/osrs/method-resolve');
 
 type Check = { id: string; title: string; status: string; detail: string; fix?: string; command?: string };
@@ -604,15 +606,34 @@ console.log('\nAn OK row shows what the job actually wrote');
 
 console.log('\nOne bad value must not take down four thousand good ones');
 {
-  // high/low are int4. Before safeInt, a single out-of-range price aborted
-  // the whole 1,000-row batch, which meant the price poll died for every
-  // item on the site because of one of them.
+  // Before safeInt, a single out-of-range price aborted the whole 1,000-row
+  // batch, which meant the price poll died for every item on the site
+  // because of one of them.
   eq('an ordinary price passes through', safeInt(1_234_567), 1_234_567);
-  eq('the int4 ceiling is allowed', safeInt(INT4_MAX), INT4_MAX);
-  eq('the int4 floor is allowed', safeInt(INT4_MIN), INT4_MIN);
-  eq('one over the ceiling becomes unknown', safeInt(INT4_MAX + 1), null);
-  eq('a wildly large value becomes unknown', safeInt(3_000_000_000), null);
-  eq('one under the floor becomes unknown', safeInt(INT4_MIN - 1), null);
+
+  // The guard used to stop at int4, which is also the max cash stack. That
+  // was wrong for the game: the Grand Exchange quotes a handful of items
+  // above one cash stack, and nulling those made them VANISH, because
+  // /items and /flips both require low and high to be non-null. The
+  // columns are int8 as of migration 0011 and these must survive.
+  eq('max cash stack is a price, not a ceiling', safeInt(INT4_MAX), INT4_MAX);
+  eq('one gp over max cash is still a price', safeInt(INT4_MAX + 1), INT4_MAX + 1);
+  eq('a 3rd age pickaxe at 8.778b survives', safeInt(8_778_000_000), 8_778_000_000);
+  eq('and so does its sell side', safeInt(8_578_000_000), 8_578_000_000);
+  eq('negative int4 is not a boundary either', safeInt(INT4_MIN - 1), INT4_MIN - 1);
+
+  // The real limit is what Drizzle can read back exactly: these columns are
+  // mode:'number', so a value past MAX_SAFE_INTEGER would round-trip with
+  // the last digits wrong. A price we cannot reproduce is not one to store.
+  eq('the safe-integer ceiling is allowed', safeInt(GP_MAX), GP_MAX);
+  eq('one past it becomes unknown', safeInt(GP_MAX + 2), null);
+  eq('the safe-integer floor is allowed', safeInt(GP_MIN), GP_MIN);
+
+  // The margin on that pickaxe, worked through ge.ts, must match what the
+  // game would charge: 2% of 8.778b is 175m, so the 5m cap binds hard.
+  eq('tax on an 8.778b sale is the 5m cap', geTax(8_778_000_000), 5_000_000);
+  eq('margin is the spread less the capped tax',
+    marginPerUnit(8_578_000_000, 8_778_000_000), 195_000_000);
 
   // Null means unknown and must stay unknown, not become zero: a free item
   // and an untraded one are completely different things to this app.

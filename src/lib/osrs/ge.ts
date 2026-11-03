@@ -64,22 +64,44 @@ export function roiPercent(buyPrice: number, sellPrice: number, itemId?: number)
  * gp, because the 2% is taken off the sale. Below roughly a 2.05% spread,
  * every flip is a loss no matter how it looks in the margin column.
  *
- * Solved by stepping up from the algebraic estimate rather than closed form,
- * because the floor in the tax makes the exact boundary jump around by a gp.
+ * Found by bisection rather than algebra. There is a closed form for each of
+ * the tax's three regimes — free under 50gp, 2% up to 250m, flat 5m above it
+ * — but stitching them together means getting two boundaries exactly right,
+ * and the whole point of this function is the exact gp.
+ *
+ * The previous version estimated buyPrice / 0.98 and walked UP a few gp. That
+ * is correct while the 2% applies and badly wrong once the 5m cap binds,
+ * where the true breakeven sits far BELOW the estimate: on an 8.5b item it
+ * overstated the minimum sell price by about 170m. It never looked broken,
+ * because the price it returned was profitable — just not the lowest one, so
+ * it silently shrank the band on exactly the items with the most in them.
  */
 export function breakevenSellPrice(buyPrice: number, itemId?: number): number {
   if (buyPrice <= 0) return 0;
-  // Below the tax threshold, selling for a single gp more is already profit.
-  if (buyPrice < GE_TAX_FREE_BELOW) return buyPrice + 1;
 
-  let candidate = Math.floor(buyPrice / (1 - GE_TAX_RATE));
-  // Walk the last couple of gp exactly; the floor means the estimate can sit
-  // either side of the true boundary.
-  for (let i = 0; i < 8; i++) {
-    if (netSellPrice(candidate, itemId) > buyPrice) return candidate;
-    candidate++;
+  // No shortcut for cheap items. "Under 50gp is untaxed, so sell for one
+  // more" is wrong at exactly 49: the SELL at 50 is taxed a gp, so it nets
+  // 49 and breaks even rather than profiting. The real answer there is 51.
+  // The bisection below gets it without needing the threshold named at all,
+  // and the lo check makes the genuinely untaxed cases a single step.
+
+  // netSellPrice is non-decreasing in the sell price, so the predicate
+  // "clears the buy price" flips exactly once and bisection is valid.
+  //
+  // The upper bound is profitable whatever the tax does: the most that can
+  // ever be taken is the cap, so buyPrice + cap + 1 nets at least
+  // buyPrice + 1. That also keeps the search to ~23 steps rather than
+  // scaling with the price.
+  let lo = buyPrice + 1;
+  let hi = buyPrice + GE_TAX_CAP_PER_ITEM + 1;
+  if (netSellPrice(lo, itemId) > buyPrice) return lo;
+
+  while (lo < hi) {
+    const mid = lo + Math.floor((hi - lo) / 2);
+    if (netSellPrice(mid, itemId) > buyPrice) hi = mid;
+    else lo = mid + 1;
   }
-  return candidate;
+  return lo;
 }
 
 /** The spread, as a percentage of the buy price, that a flip needs to clear. */
