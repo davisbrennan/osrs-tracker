@@ -18,6 +18,7 @@ const {
   jsonLdProps,
   SCHEMA_ITEMS,
 } = await import('@/lib/structured-data');
+const { adsAllowedOn, NOINDEX_PATHS, ADSENSE } = await import('@/lib/site');
 
 let fail = 0;
 let checks = 0;
@@ -198,6 +199,37 @@ console.log('\nAn array of schemas renders as a JSON array');
 
 console.log('\nThe list cap is sane');
 ok('SCHEMA_ITEMS is a small positive integer', Number.isInteger(SCHEMA_ITEMS) && SCHEMA_ITEMS > 0 && SCHEMA_ITEMS <= 50, String(SCHEMA_ITEMS));
+
+console.log('\nAds go on public pages and nowhere else');
+{
+  // AdSense placement policy forbids ads on pages behind a login or without
+  // publisher content, and Google suspends accounts over it. With Auto ads
+  // on, the loader running IS an ad placement, so this list is the control.
+  for (const path of ['/', '/flips', '/items', '/item/4151', '/money', '/unusual',
+                      '/news', '/privacy', '/terms']) {
+    ok(`ads allowed on ${path}`, adsAllowedOn(path));
+  }
+  for (const path of ['/signin', '/dashboard', '/journal', '/watchlist', '/alerts',
+                      '/settings', '/accounts', '/unlocks', '/admin', '/admin/health',
+                      '/admin/news', '/api/health']) {
+    ok(`no ads on ${path}`, !adsAllowedOn(path));
+  }
+
+  // Every non-public page is covered by the search rule, so the two can
+  // never disagree — that is the whole reason the list is shared.
+  ok('every noindex path is also ad-free', NOINDEX_PATHS.every((p) => !adsAllowedOn(p)));
+
+  // A prefix entry must not swallow an unrelated page that merely starts
+  // with the same letters.
+  ok('/settings does not block /settlements', adsAllowedOn('/settlements'));
+  ok('/alerts does not block /alertsomething', adsAllowedOn('/alertsomething'));
+  ok('an empty path is treated as not public', !adsAllowedOn(''));
+
+  // ads.txt must carry the id without the "ca-" prefix, which is the single
+  // easiest thing to get wrong and silently earns nothing.
+  eq('publisher id drops the ca- prefix', ADSENSE.publisherId, 'pub-6224004888797340');
+  ok('and the client keeps it', ADSENSE.client.startsWith('ca-pub-'));
+}
 
 console.log(`\n${checks - fail}/${checks} checks passed`);
 if (fail) process.exit(1);

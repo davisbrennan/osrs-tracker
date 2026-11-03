@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Archivo, IBM_Plex_Mono } from 'next/font/google';
 import { SITE } from '@/lib/site';
+import AdSense from '@/components/adsense';
 import './globals.css';
 
 /*
@@ -8,8 +9,9 @@ import './globals.css';
  *
  * next/font downloads these at build time and serves them from our own
  * domain, so a visitor's browser never contacts Google and no IP address
- * leaves for a font. That keeps the site free of third-party requests, which
- * is what keeps it out of cookie-consent territory.
+ * leaves for a font. Still worth doing, but it no longer makes the site
+ * third-party-free: AdSense is mounted below and that IS a tracker. The
+ * fonts just are not part of it.
  *
  * The trade-off is that the Docker build needs to reach Google, and a blip
  * there fails the whole deploy — which has happened. Fewer families is fewer
@@ -52,7 +54,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={fontVars}>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* Public pages only — see components/adsense.tsx. */}
+        <AdSense />
+      </body>
     </html>
   );
 }

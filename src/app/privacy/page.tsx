@@ -40,9 +40,11 @@ export default function Privacy() {
       </ul>
 
       <p>
-        There is no analytics script, no advertising, no tracking pixel and no third-party
-        JavaScript of any kind. Fonts are served from this domain rather than from Google, so
-        loading a page does not tell anyone else that you visited.
+        The public pages carry Google AdSense, which is third-party JavaScript and does set
+        cookies. There is still no analytics script and no tracking pixel of our own, and the
+        signed-in pages — your dashboard, journal, watchlist, alerts, settings and anything under
+        admin — carry no ad code at all. Fonts are served from this domain rather than from
+        Google, so they tell nobody that you visited.
       </p>
 
       <h2>What it does not do</h2>
@@ -52,7 +54,16 @@ export default function Privacy() {
           to the game, reads your client or automates anything.
         </li>
         <li>It does not sell or share your data. There is nobody to sell it to.</li>
-        <li>It does not build a profile of you or track you across other sites.</li>
+        <li>
+          It does not build a profile of you itself, and nothing you enter here — your cash stack,
+          your trades, the accounts you track — is passed to the ad network or to anyone else.
+          Google may use its own cookie to personalise the ads it shows you across sites; you can
+          turn that off for your Google account at{' '}
+          <a href="https://myadcenter.google.com/" target="_blank" rel="noopener noreferrer">
+            My Ad Center
+          </a>
+          .
+        </li>
       </ul>
 
       <h2>Where the game data comes from</h2>
@@ -82,8 +93,18 @@ export default function Privacy() {
 
       <h2>Cookies</h2>
       <p>
-        One, and it is strictly necessary, which is why there is no consent banner. Nothing here
-        sets a cookie for advertising or analytics.
+        One of ours, and it is strictly necessary: it keeps you signed in. We set nothing for
+        analytics. Google AdSense sets its own cookies on the public pages for ad serving,
+        frequency capping and fraud prevention, and those are not ours to list — Google documents
+        them in its{' '}
+        <a
+          href="https://policies.google.com/technologies/partner-sites"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          partner-sites notice
+        </a>
+        .
       </p>
       <table>
         <thead>

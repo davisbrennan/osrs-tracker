@@ -10,7 +10,7 @@ export const LEGAL = {
   entity: 'RSpill',
   contactEmail: process.env.OSRS_CONTACT ?? 'hello@rspill.com',
   jurisdiction: 'Texas, United States',
-  lastUpdated: 'October 2026',
+  lastUpdated: 'November 2026',
 
   /** Every third party that touches user data. Add one here when you add one. */
   subprocessors: [
@@ -31,6 +31,12 @@ export const LEGAL = {
       role: 'Encrypted off-site backups',
       data: 'Encrypted copies of the database',
       where: 'United States',
+    },
+    {
+      name: 'Google AdSense',
+      role: 'Advertising on the public pages',
+      data: 'IP address, user agent and ad-serving cookies. No account data, trades or cash stack — the ad code is not loaded on signed-in pages at all',
+      where: 'Global',
     },
     {
       name: 'Cloudflare',

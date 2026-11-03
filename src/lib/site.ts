@@ -153,6 +153,27 @@ export const FAQS = [
  * metadata; this is the belt to that's braces, and it covers the case where
  * a crawler reads robots.txt and never fetches the page at all.
  */
+/**
+ * Google AdSense.
+ *
+ * The publisher id is public by definition — it ships in the page source of
+ * every site running ads — so it lives here beside the other site constants
+ * rather than in an env var that would imply it is a secret.
+ *
+ * The loader is mounted by components/adsense.tsx, which keeps it off the
+ * signed-in and admin pages. That is deliberate: with Auto ads switched on
+ * in the AdSense dashboard Google injects units wherever the script runs,
+ * and ads on an admin screen or a sign-in page are both useless and against
+ * AdSense's own placement policies.
+ */
+export const ADSENSE = {
+  client: 'ca-pub-6224004888797340',
+  /** ads.txt uses the same id without the "ca-" prefix. */
+  get publisherId() {
+    return this.client.replace(/^ca-/, '');
+  },
+} as const;
+
 export const NOINDEX_PATHS = [
   '/unlocks',
   '/dashboard',
@@ -165,3 +186,22 @@ export const NOINDEX_PATHS = [
   '/alerts',
   '/accounts',
 ] as const;
+
+/**
+ * May this path carry ads?
+ *
+ * Public content only. NOINDEX_PATHS is reused rather than copied: it is
+ * already the answer to "pages that are not public content", decided for
+ * search, and two lists would drift apart the first time a page is added.
+ *
+ * Lives here rather than in the component so it can be tested without
+ * importing React — and so the rule sits next to the list it reads.
+ */
+export function adsAllowedOn(pathname: string): boolean {
+  if (!pathname) return false;
+  return !NOINDEX_PATHS.some((p) =>
+    // Entries ending in "/" are prefixes ("/api/"); the rest match the page
+    // itself and anything beneath it, so "/admin" covers "/admin/health".
+    p.endsWith('/') ? pathname.startsWith(p) : pathname === p || pathname.startsWith(`${p}/`)
+  );
+}
