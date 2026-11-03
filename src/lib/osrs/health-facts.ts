@@ -29,6 +29,7 @@ import {
   gradeAlerts,
   gradeBuild,
   gradeDisk,
+  gradeBackup,
   type Check,
   type JobRun,
 } from '@/lib/osrs/health';
@@ -233,6 +234,33 @@ async function historyCheck(): Promise<Check> {
   }
 }
 
+async function backupCheck(): Promise<Check> {
+  try {
+    const rows = rowsOf<Record<string, unknown>>(
+      await db.execute(sql`
+        select
+          (select extract(epoch from (now() - max(started_at))) / 3600
+             from osrs_job_runs where job = 'backup' and status = 'ok') as ok_hours,
+          (select status from osrs_job_runs where job = 'backup'
+            order by started_at desc limit 1) as last_status,
+          (select error from osrs_job_runs where job = 'backup' and status = 'failed'
+            order by started_at desc limit 1) as last_error,
+          (select count(*) from osrs_job_runs where job = 'backup')::int as runs
+      `)
+    );
+    const r = rows[0] ?? {};
+    const okHours = r.ok_hours === null || r.ok_hours === undefined ? null : Number(r.ok_hours);
+    return gradeBackup({
+      lastOkHoursAgo: Number.isFinite(okHours) ? okHours : null,
+      lastFailed: r.last_status === 'failed',
+      error: typeof r.last_error === 'string' ? r.last_error : null,
+      everRan: asNumber(r.runs) > 0,
+    });
+  } catch (e) {
+    return unknownCheck('backups', 'Backups', String(e).slice(0, 120));
+  }
+}
+
 async function diskCheck(): Promise<Check> {
   try {
     const s = await storage();
@@ -279,6 +307,7 @@ export async function healthReport(now: Date = new Date()): Promise<HealthReport
     alertsCheck(),
     diskCheck(),
   ]);
+  const backups = await backupCheck();
 
   // Whichever build most recently wrote a run is the one the worker is on.
   const newest = [...runs.values()].sort(
@@ -292,7 +321,7 @@ export async function healthReport(now: Date = new Date()): Promise<HealthReport
 
   return {
     jobs,
-    features: [disk, catalogue, methods, wiki, history, alerts, build],
+    features: [backups, disk, catalogue, methods, wiki, history, alerts, build],
     noRunsRecorded: runs.size === 0,
   };
 }

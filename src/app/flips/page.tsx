@@ -46,6 +46,8 @@ function compare(a: Opportunity, b: Opportunity, key: SortKey): number {
       return a.name.localeCompare(b.name);
     case 'buy':
       return a.buyPrice - b.buyPrice;
+    case 'sell':
+      return a.sellPrice - b.sellPrice;
     case 'margin':
       return a.marginPerUnit - b.marginPerUnit;
     case 'roi':

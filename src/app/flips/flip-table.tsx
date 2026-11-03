@@ -1,13 +1,34 @@
 import Link from 'next/link';
 import type { Opportunity } from '@/lib/osrs/ge';
 import { formatGp, minimumViableSpreadPercent } from '@/lib/osrs/ge';
+import { suggestOffers } from '@/lib/osrs/offers';
 import { gpClass, plClass, ago } from '@/lib/gp';
 
-export type SortKey = 'profit' | 'margin' | 'roi' | 'buy' | 'volume' | 'name' | 'limit' | 'capital';
+export type SortKey =
+  | 'profit'
+  | 'margin'
+  | 'roi'
+  | 'buy'
+  | 'sell'
+  | 'volume'
+  | 'name'
+  | 'limit'
+  | 'capital';
 
 export const SORTS: { key: SortKey; label: string; left?: boolean; title: string }[] = [
   { key: 'name', label: 'Item', left: true, title: 'Sort by name' },
-  { key: 'buy', label: 'Buy at', title: 'The instant-sell price — what you buy at' },
+  {
+    key: 'buy',
+    label: 'Buy at',
+    title:
+      'The instant-sell price — what you buy at. Beneath it, the most you can pay and still profit.',
+  },
+  {
+    key: 'sell',
+    label: 'Sell at',
+    title:
+      'The instant-buy price — what you sell into. Beneath it, the least you can accept and still profit.',
+  },
   { key: 'margin', label: 'Margin', title: 'Profit per unit after the 2% sale tax' },
   { key: 'roi', label: 'ROI', title: 'Margin as a percentage of the buy price' },
   { key: 'limit', label: 'Limit', title: 'Units you may buy per 4 hours' },
@@ -77,6 +98,9 @@ export default function FlipTable({
         <tbody>
           {rows.map((o) => {
             const spread = minimumViableSpreadPercent(o.buyPrice, o.itemId);
+            // The band. Null only if a price went missing between the query
+            // and here, which the row's own filters already rule out.
+            const band = suggestOffers({ low: o.buyPrice, high: o.sellPrice, itemId: o.itemId });
             return (
               <tr key={o.itemId}>
                 <th scope="row">
@@ -86,6 +110,21 @@ export default function FlipTable({
                 </th>
                 <td>
                   <span className={gpClass(o.buyPrice)}>{formatGp(o.buyPrice)}</span>
+                  {/* Suppressed at a knife edge, where the limit IS the last-traded
+                      price and repeating it reads as a duplicated cell. */}
+                  {band && band.overbidRoom > 0 && (
+                    <span className="band-room" title={`Pay up to ${formatGp(band.maxBuy)}`}>
+                      ↑ {formatGp(band.maxBuy)}
+                    </span>
+                  )}
+                </td>
+                <td>
+                  <span className={gpClass(o.sellPrice)}>{formatGp(o.sellPrice)}</span>
+                  {band && band.undercutRoom > 0 && (
+                    <span className="band-room" title={`Accept down to ${formatGp(band.minSell)}`}>
+                      ↓ {formatGp(band.minSell)}
+                    </span>
+                  )}
                 </td>
                 <td
                   title={`Needs a ${spread.toFixed(2)}% spread to clear the tax — sell above ${formatGp(

@@ -2256,3 +2256,200 @@ h2 .subtle {
   flex: none;
   accent-color: var(--gold);
 }
+
+/* ============================================================
+   The offer band — components/offer-band.tsx
+
+   One price axis, two lanes. The buy lane runs from the left
+   edge; the sell lane runs to the right edge; where they
+   overlap, both lanes are filled and the bar reads solid.
+   That overlap is the whole argument of the panel — the two
+   rooms are cut from one margin — so it is drawn rather than
+   only described, and both lanes are the same gold because
+   they are the same substance.
+   ============================================================ */
+
+.ob {
+  /* Lifted off the page a step: this is the panel people came for. */
+  background: var(--panel-2);
+  border-color: var(--rule);
+}
+.ob-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+/* .card > h2 does not reach this one — it is wrapped in .ob-head — so the
+   site's section-label treatment is restated rather than inherited. */
+.ob-head h2 {
+  color: var(--dim);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  margin: 0;
+}
+
+.ob-rate {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 2px var(--s-2);
+  border-radius: var(--r-sm);
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.ob-rate-comfortable {
+  color: var(--conf-good);
+}
+.ob-rate-tight {
+  color: var(--conf-thin);
+}
+.ob-rate-knife-edge,
+.ob-rate-none {
+  color: var(--loss);
+}
+
+/* ---------------------------------------------------- the two prices */
+
+.ob-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4);
+}
+.ob-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ob-sell {
+  text-align: right;
+}
+.ob-label {
+  font-size: 12px;
+  color: var(--dim);
+}
+.ob-price {
+  /* The number people came to read. Nothing else on the panel competes. */
+  font-size: 28px;
+  line-height: 1.1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.ob-limit {
+  font-size: 13px;
+  color: var(--text-2);
+}
+.ob-limit strong {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+/* ---------------------------------------------------- the axis */
+
+.ob-rail {
+  position: relative;
+  height: 18px;
+  margin: var(--s-4) 0 var(--s-2);
+}
+.ob-track {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r-sm);
+}
+.ob-seg {
+  position: absolute;
+  height: 7px;
+  background: var(--gold);
+  /* Squared off: these are price limits, and a rounded cap would imply the
+     edge is soft. It is not — one gp past it the flip stops paying. */
+  border-radius: 1px;
+}
+.ob-seg-buy {
+  top: 2px;
+}
+.ob-seg-sell {
+  bottom: 2px;
+}
+
+.ob-rooms {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-size: 13px;
+  color: var(--text-2);
+}
+.ob-room-sell {
+  text-align: right;
+}
+.ob-room strong {
+  color: var(--text);
+  font-weight: 500;
+}
+.ob-arrow {
+  color: var(--gold-dim);
+  font-size: 9px;
+}
+
+/* ---------------------------------------------------- the prose */
+
+.ob-note {
+  font-size: 13px;
+  color: var(--text-2);
+  margin: var(--s-4) 0 0;
+  max-width: 68ch;
+}
+.ob-caveat {
+  font-size: 12px;
+  color: var(--dim);
+  margin: var(--s-3) 0 0;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule-soft);
+  max-width: 72ch;
+}
+
+.ob-dead .ob-dead-line {
+  font-size: 15px;
+  color: var(--text-2);
+  margin: 0;
+  max-width: 68ch;
+}
+.ob-dead .ob-dead-line strong {
+  color: var(--text);
+}
+.ob-dead .ob-note {
+  margin-top: var(--s-3);
+}
+
+@media (max-width: 620px) {
+  .ob-pair {
+    grid-template-columns: 1fr;
+    gap: var(--s-3);
+  }
+  .ob-sell,
+  .ob-room-sell {
+    text-align: left;
+  }
+  .ob-price {
+    font-size: 24px;
+  }
+  .ob-rooms {
+    flex-direction: column;
+    gap: var(--s-1);
+  }
+}
+
+/* The band, folded into the flip table's buy and sell cells: the limit
+   price sits under the last-traded one, so a row answers "and how far can
+   I push it" without a tenth and eleventh column. */
+.band-room {
+  display: block;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--gold-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

@@ -8,7 +8,17 @@ import { gpExact, plClass } from '@/lib/gp';
 import { collectionSchema, jsonLdProps, SCHEMA_ITEMS } from '@/lib/structured-data';
 import AppShell from '@/components/app-shell';
 
-export const revalidate = 120;
+/*
+ * No revalidate here, because it would do nothing.
+ *
+ * This page reads the signed-in user to price everything against their
+ * cash stack, and reading cookies makes a route dynamic — `next build`
+ * marks it ƒ, not ○. A `revalidate` export alongside that is dead code
+ * that reads like caching, which is worse than no caching at all.
+ *
+ * What IS cached is the shared, user-independent work, inside the
+ * functions that do it. See lib/memo.ts.
+ */
 
 export const metadata: Metadata = {
   alternates: { canonical: '/money' },

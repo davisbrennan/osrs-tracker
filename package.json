@@ -33,7 +33,9 @@
     "test:quests": "tsx scripts/test-quests.mts",
     "test:dashboard": "tsx scripts/test-dashboard.mts",
     "test:progress": "tsx scripts/test-progress-stats.mts",
-    "test:news": "tsx scripts/test-news-feed.mts"
+    "test:news": "tsx scripts/test-news-feed.mts",
+    "test:memo": "tsx scripts/test-memo.mts",
+    "test:offers": "tsx scripts/test-offers.mts"
   },
   "dependencies": {
     "better-auth": "^1.7.1",

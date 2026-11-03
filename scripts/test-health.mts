@@ -20,6 +20,7 @@ const {
   gradeAlerts,
   gradeBuild,
   gradeDisk,
+  gradeBackup,
   humanBytes,
   overallStatus,
   countByStatus,
@@ -364,6 +365,40 @@ console.log('\nAlerts with no email key is the worst combination');
   // everything else it says.
   const one = gradeAlerts({ active: 1, emailConfigured: true }) as Check;
   ok('1 alert reads as singular', one.detail.includes('1 active alert,'), one.detail);
+}
+
+console.log('\nBackups, which nobody notices stopping');
+{
+  // The failure this exists for: a backup that broke in March and is
+  // discovered in July.
+  const never = gradeBackup({ lastOkHoursAgo: null, lastFailed: false, error: null, everRan: false }) as Check;
+  eq('never run → fail', never.status, 'fail');
+  ok('says what is at stake', never.detail.includes('die with it'), never.detail);
+
+  // Ran but never once succeeded is worse than never having run, because
+  // it looks configured.
+  const neverOk = gradeBackup({ lastOkHoursAgo: null, lastFailed: true, error: 'repository locked', everRan: true }) as Check;
+  eq('ran, never succeeded → fail', neverOk.status, 'fail');
+  ok('with the error', neverOk.detail.includes('repository locked'), neverOk.detail);
+
+  eq('last night → ok', (gradeBackup({ lastOkHoursAgo: 9, lastFailed: false, error: null, everRan: true }) as Check).status, 'ok');
+
+  // One missed night is a blip; three is not a nightly backup.
+  eq('40 hours → warn', (gradeBackup({ lastOkHoursAgo: 40, lastFailed: false, error: null, everRan: true }) as Check).status, 'warn');
+  const stale = gradeBackup({ lastOkHoursAgo: 96, lastFailed: false, error: null, everRan: true }) as Check;
+  eq('four days → fail', stale.status, 'fail');
+  ok('counted in days', stale.detail.includes('4 days'), stale.detail);
+
+  // A recent success plus a failed latest attempt is a warning, not an
+  // emergency — there is still a usable copy.
+  const blip = gradeBackup({ lastOkHoursAgo: 10, lastFailed: true, error: 'B2 timeout', everRan: true }) as Check;
+  eq('recent success, failed attempt → warn', blip.status, 'warn');
+  ok('names the error', blip.detail.includes('B2 timeout'), blip.detail);
+  ok('and says a good copy exists', blip.detail.includes('exists'), blip.detail);
+
+  // Even when green it must not claim more than it knows.
+  const good = gradeBackup({ lastOkHoursAgo: 8, lastFailed: false, error: null, everRan: true }) as Check;
+  ok('green does not claim restores work', good.detail.includes('restore-test'), good.detail);
 }
 
 console.log('\nDisk is watched with room left to act on it');

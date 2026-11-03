@@ -259,6 +259,89 @@ export function gradeBuild(facts: { app: string; worker: string | null }): Check
 }
 
 /**
+ * Backups.
+ *
+ * Not a background job — it runs from a systemd timer on the host, so it
+ * has no entry in the job registry. It records itself in the same run log
+ * anyway, because the alternative is that a backup which stopped working
+ * in March is discovered in July.
+ *
+ * The thresholds are deliberately forgiving about one missed night and
+ * unforgiving about three. A nightly job that last succeeded three days
+ * ago is not a nightly job.
+ */
+export const BACKUP_WARN_HOURS = 36;
+export const BACKUP_FAIL_HOURS = 72;
+
+export function gradeBackup(facts: {
+  lastOkHoursAgo: number | null;
+  lastFailed: boolean;
+  error: string | null;
+  everRan: boolean;
+}): Check {
+  const base = { id: 'backups', title: 'Backups' };
+
+  if (!facts.everRan) {
+    return {
+      ...base,
+      status: 'fail',
+      detail:
+        'No backup has ever run. The only copies of the trade journal and quest progress are on this box, and they die with it.',
+      fix: 'Install osrs-backup and its timer — the restic settings are already in .env.example.',
+      command: 'sudo cp /srv/osrs/app/deploy/osrs-backup /usr/local/bin/ && sudo chmod +x /usr/local/bin/osrs-backup',
+    };
+  }
+
+  if (facts.lastOkHoursAgo === null) {
+    return {
+      ...base,
+      status: 'fail',
+      detail: `Backups have run but none has ever succeeded.${facts.error ? ` Last error: ${facts.error}` : ''}`,
+      fix: 'Nothing is being stored. Run it by hand to see the failure in full.',
+      command: 'sudo /usr/local/bin/osrs-backup',
+    };
+  }
+
+  if (facts.lastOkHoursAgo >= BACKUP_FAIL_HOURS) {
+    return {
+      ...base,
+      status: 'fail',
+      detail: `Last successful backup was ${Math.floor(facts.lastOkHoursAgo / 24)} days ago.${facts.error ? ` Most recent error: ${facts.error}` : ''}`,
+      fix: 'A nightly backup that last worked days ago is not a backup. Check the timer.',
+      command: 'systemctl status osrs-backup.timer && journalctl -u osrs-backup --no-pager -n 40',
+    };
+  }
+
+  if (facts.lastFailed) {
+    // Succeeded recently but the latest attempt failed: worth saying, not
+    // worth panicking about, because there is still a usable copy.
+    return {
+      ...base,
+      status: 'warn',
+      detail: `The last attempt failed${facts.error ? `: ${facts.error}` : ''} — but a successful backup from ${humanMs(facts.lastOkHoursAgo * 3_600_000)} ago exists.`,
+      fix: 'One failure is a blip; two in a row is a problem.',
+      command: 'journalctl -u osrs-backup --no-pager -n 40',
+    };
+  }
+
+  if (facts.lastOkHoursAgo >= BACKUP_WARN_HOURS) {
+    return {
+      ...base,
+      status: 'warn',
+      detail: `Last backup was ${humanMs(facts.lastOkHoursAgo * 3_600_000)} ago, and it should run nightly.`,
+      fix: 'One missed night. If it misses another, the timer is not firing.',
+      command: 'systemctl list-timers osrs-backup.timer',
+    };
+  }
+
+  return {
+    ...base,
+    status: 'ok',
+    detail: `Last succeeded ${humanMs(facts.lastOkHoursAgo * 3_600_000)} ago. Restores are not proven by this — run osrs-restore-test.`,
+  };
+}
+
+/**
  * Disk.
  *
  * A full disk is the failure that takes everything down at once and gives

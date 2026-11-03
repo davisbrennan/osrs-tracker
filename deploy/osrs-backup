@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+#
+# Nightly backup of the OSRS database, off this box.
+#
+# Install to /usr/local/bin/osrs-backup and run from a systemd timer. The
+# environment slots this reads have been in .env.example since the start
+# and nothing has ever used them — until now the only copies of the trade
+# journal and quest progress were the pre-deploy dumps on the same disk as
+# the database, which die with the box.
+#
+# Two things here that a backup script usually leaves out, both because a
+# backup you have never restored is a hypothesis:
+#
+#   - It records every run in osrs_job_runs, so the health page can say
+#     when the last one succeeded instead of nobody noticing for a month.
+#   - osrs-restore-test actually restores the newest snapshot into a
+#     scratch database and compares row counts. Run it; a repository that
+#     accepts writes and cannot be read back is the failure this is for.
+#
+set -euo pipefail
+
+cd /srv/osrs
+set -a
+# shellcheck disable=SC1091
+source .env
+set +a
+
+KEEP_DAILY=${BACKUP_KEEP_DAILY:-7}
+KEEP_WEEKLY=${BACKUP_KEEP_WEEKLY:-4}
+KEEP_MONTHLY=${BACKUP_KEEP_MONTHLY:-6}
+
+started=$(date +%s)
+
+# Record the attempt before doing anything, so a run that dies halfway
+# still leaves evidence. Failures to record never stop the backup: the
+# bookkeeping must not be able to break the thing it is bookkeeping.
+record() {
+  local status="$1" detail="$2" duration="$3"
+  docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -q -c \
+    "INSERT INTO osrs_job_runs (job, started_at, finished_at, status, error, duration_ms, build)
+     VALUES ('backup', to_timestamp($started), now(), '$status',
+             $( [ -n "$detail" ] && echo "\$\$$detail\$\$" || echo NULL ),
+             $duration, 'script')" >/dev/null 2>&1 || true
+}
+
+fail() {
+  local message="$1"
+  echo "!! $message" >&2
+  record failed "$message" $(( ($(date +%s) - started) * 1000 ))
+  exit 1
+}
+
+for required in RESTIC_REPOSITORY RESTIC_PASSWORD POSTGRES_USER POSTGRES_DB; do
+  [ -n "${!required:-}" ] || fail "$required is not set in /srv/osrs/.env"
+done
+
+command -v restic >/dev/null 2>&1 || fail "restic is not installed (apt install restic)"
+
+# Initialise on first run. `cat` rather than `-r` so the password never
+# appears in the process list, where any user on the box could read it.
+if ! restic snapshots >/dev/null 2>&1; then
+  echo "==> initialising repository"
+  restic init || fail "could not initialise the restic repository"
+fi
+
+echo "==> dumping $POSTGRES_DB"
+dump=$(mktemp /tmp/osrs-backup-XXXXXX.sql.gz)
+# The trap fires on any exit path, so a failure halfway does not leave a
+# copy of the whole database sitting in /tmp.
+trap 'rm -f "$dump"' EXIT
+
+# --clean --if-exists so the dump can be restored over an existing
+# database without hand-editing it at three in the morning.
+if ! docker compose exec -T db pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+     --clean --if-exists | gzip > "$dump"; then
+  fail "pg_dump failed"
+fi
+
+size=$(stat -c %s "$dump")
+# A dump far too small to be real is the shape of a silent failure: a
+# gzip of an error message is a few hundred bytes and uploads cheerfully.
+[ "$size" -gt 10000 ] || fail "dump is only ${size} bytes — refusing to store it"
+echo "==> dump is $(numfmt --to=iec "$size")"
+
+echo "==> uploading"
+restic backup "$dump" \
+  --tag osrs --tag db \
+  --host "${BACKUP_HOST:-$(hostname)}" \
+  || fail "restic backup failed"
+
+echo "==> pruning (${KEEP_DAILY}d / ${KEEP_WEEKLY}w / ${KEEP_MONTHLY}m)"
+restic forget \
+  --tag osrs \
+  --keep-daily "$KEEP_DAILY" \
+  --keep-weekly "$KEEP_WEEKLY" \
+  --keep-monthly "$KEEP_MONTHLY" \
+  --prune \
+  || echo "!! prune failed — the backup itself succeeded, so not treating this as fatal" >&2
+
+# Reads back a slice of the actual data rather than trusting the index.
+# This is cheap; the full restore test is a separate script.
+echo "==> verifying"
+restic check --read-data-subset=5% || fail "restic check failed — the repository is not readable"
+
+duration=$(( ($(date +%s) - started) * 1000 ))
+count=$(restic snapshots --tag osrs --json 2>/dev/null | grep -c '"short_id"' || echo '?')
+record ok "" "$duration"
+echo "==> done in $((duration / 1000))s — ${count} snapshots in the repository"
+echo "==> a backup you have not restored is a hypothesis. Run: osrs-restore-test"

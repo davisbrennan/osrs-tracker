@@ -2,6 +2,7 @@
 
 import { eq, and, gte, desc, inArray, sql } from 'drizzle-orm';
 import { db, rowsOf } from '@/database';
+import { memo } from '@/lib/memo';
 import { osrsItems, osrsPrices, osrsPriceDaily } from '@/database/schema';
 import {
   historyContext,
@@ -141,7 +142,22 @@ export async function unusualCandidates(
 }
 
 /** How much of the catalogue has enough history to be judged yet. */
+/**
+ * How many items the statistics can speak about.
+ *
+ * A full aggregate over every daily bar, which at a 90-day retention is
+ * 360,000 rows and about 70ms — and it produces two numbers for a caption
+ * that is identical for every visitor and changes at most once an hour,
+ * when the rollup runs. Recomputing it per request was the single largest
+ * cost of the Unusual page.
+ */
+const COVERAGE_TTL_MS = 10 * 60_000;
+
 export async function historyCoverage(): Promise<{ withEnough: number; priced: number }> {
+  return memo('history-coverage', COVERAGE_TTL_MS, computeHistoryCoverage);
+}
+
+async function computeHistoryCoverage(): Promise<{ withEnough: number; priced: number }> {
   const result = await db.execute<{ with_enough: number; priced: number }>(sql`
     SELECT
       count(*) FILTER (WHERE COALESCE(d.bars, 0) >= 20)::int AS with_enough,

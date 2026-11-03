@@ -22,6 +22,8 @@ import { priceAge, exactStamp, slowerSide } from '@/lib/osrs/freshness';
 import AppShell from '@/components/app-shell';
 import { itemSchema, breadcrumbSchema, jsonLdProps } from '@/lib/structured-data';
 import { SITE, SOCIAL_CARD } from '@/lib/site';
+import OfferBand from '@/components/offer-band';
+import { suggestOffers } from '@/lib/osrs/offers';
 import PriceHistory from './price-history';
 import WatchButton from './watch-button';
 import HistoryContextPanel from './history-context';
@@ -133,6 +135,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
   const lagging = slowerSide(age);
 
   const priced = item.low !== null && item.high !== null;
+  const offers = suggestOffers({ low: item.low, high: item.high, itemId: item.id });
   const opportunity = priced
     ? evaluate(
         {
@@ -209,6 +212,11 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
       </div>
 
       {item.examine && <p className="examine">&ldquo;{item.examine}&rdquo;</p>}
+
+      {/* The actionable answer leads. Most visitors arrive here from the
+          flip finder wanting a price to type in; the encyclopedia entry and
+          the arithmetic that backs the band up follow it. */}
+      {offers && <OfferBand offers={offers} itemName={item.name} />}
 
       {/* ------------------------------------------------ what it is and does */}
       <section className="card about">

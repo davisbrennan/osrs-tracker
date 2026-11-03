@@ -1,0 +1,16 @@
+# /etc/systemd/system/osrs-backup.timer
+#
+# 03:40 rather than 03:00 or 03:30: every other cron job on every other
+# box in the world runs on the hour and the half hour, and a backup that
+# competes with them for disk takes longer for no reason.
+[Unit]
+Description=Nightly OSRS database backup
+
+[Timer]
+OnCalendar=*-*-* 03:40:00
+# Catches up after a reboot rather than silently skipping a night.
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

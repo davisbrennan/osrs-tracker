@@ -12,6 +12,24 @@ export const pool =
     connectionString: process.env.DATABASE_URL,
     max: 10,
     idleTimeoutMillis: 30_000,
+    /*
+     * Fail fast when the database is unreachable.
+     *
+     * Without this, pg waits forever for a connection it is never going
+     * to get. With Postgres stopped, /api/health did not return a 503 —
+     * it did not return at all, still hanging after 45 seconds, and every
+     * page that touches the database hung with it. That turns "the
+     * database is down", which is survivable, into "every request hangs
+     * until something times out", which is not.
+     *
+     * It also matters to the deploy: osrs-deploy polls /api/health to
+     * decide whether a new container is healthy, and an endpoint that
+     * hangs is neither healthy nor unhealthy.
+     *
+     * Five seconds is long enough for a loaded box to hand out a
+     * connection and short enough that a human is still waiting.
+     */
+    connectionTimeoutMillis: 5_000,
   });
 
 if (process.env.NODE_ENV !== 'production') global.__pgPool = pool;

@@ -1,0 +1,18 @@
+# /etc/systemd/system/osrs-backup.service
+#
+# Oneshot, driven by osrs-backup.timer. Root because it reads
+# /srv/osrs/.env, which holds the restic password and must not be
+# world-readable.
+[Unit]
+Description=Back up the OSRS database to restic
+# Docker must be up: the dump runs through `docker compose exec db`.
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/osrs-backup
+# A slow upload is not a failure; a hung one is.
+TimeoutStartSec=3600
+Nice=10
+IOSchedulingClass=idle
