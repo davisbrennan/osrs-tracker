@@ -3,6 +3,7 @@ import { eq, and, isNotNull, gte, desc } from 'drizzle-orm';
 import { db } from '@/database';
 import { osrsItems, osrsPrices } from '@/database/schema';
 import { SITE } from '@/lib/site';
+import { GUIDES } from '@/lib/guides';
 
 /**
  * Static pages, then the item pages.
@@ -29,7 +30,19 @@ const MAX_ITEMS = 5000;
 /** Below this an item is not really trading. */
 const MIN_VOLUME = 1;
 
-const PAGES = ['', '/flips', '/items', '/unusual', '/money', '/news', '/privacy', '/terms'];
+const PAGES = [
+  '',
+  '/flips',
+  '/items',
+  '/unusual',
+  '/money',
+  '/news',
+  '/guides',
+  '/about',
+  '/contact',
+  '/privacy',
+  '/terms',
+];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -49,7 +62,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           ? 0.9
           : ['/items', '/money', '/unusual', '/news'].includes(path)
             ? 0.8
-            : 0.6,
+            : path === '/guides'
+              ? 0.8
+              : 0.6,
+  }));
+
+  // Guides are the site's only long-form content and change rarely, so they
+  // get a real priority and a slow crawl frequency rather than being left
+  // out of the sitemap the way static pages usually are.
+  const guides: MetadataRoute.Sitemap = GUIDES.map((g) => ({
+    url: `${SITE.url}/guides/${g.slug}`,
+    lastModified: now,
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
   }));
 
   let items: MetadataRoute.Sitemap = [];
@@ -84,5 +109,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Falling back to the static pages keeps it valid and useful.
   }
 
-  return [...statics, ...items];
+  return [...statics, ...guides, ...items];
 }

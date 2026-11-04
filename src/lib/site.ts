@@ -57,7 +57,7 @@ export const SOCIAL_CARD = {
  * silent failure this grouping could introduce. `npm run check:nav` enforces
  * it.
  */
-export const NAV_DIRECT = ['dashboard', 'flips'] as const;
+export const NAV_DIRECT = ['dashboard', 'flips', 'guides'] as const;
 
 export type NavGroup = {
   key: string;
@@ -78,11 +78,29 @@ export const NAV = [
   { href: '/unusual', label: 'Unusual', key: 'unusual', public: true },
   { href: '/money', label: 'Money makers', key: 'money', public: true },
   { href: '/news', label: 'News', key: 'news', public: true },
+  { href: '/guides', label: 'Guides', key: 'guides', public: true },
   { href: '/unlocks', label: 'Unlocks', key: 'unlocks', public: false },
   { href: '/watchlist', label: 'Watchlist', key: 'watchlist', public: false },
   { href: '/alerts', label: 'Alerts', key: 'alerts', public: false },
   { href: '/accounts', label: 'Accounts', key: 'accounts', public: false },
   { href: '/journal', label: 'Book', key: 'journal', public: false },
+] as const;
+
+/**
+ * The footer, on every page.
+ *
+ * About, Contact, Privacy and Terms were previously reachable only from the
+ * landing page, which meant that from an item page — where most visitors
+ * actually arrive — there was no route to any of them. These belong at the
+ * bottom of every page rather than in the main nav, which is where people
+ * look for them.
+ */
+export const FOOTER_LINKS = [
+  { href: '/about', label: 'About' },
+  { href: '/guides', label: 'Guides' },
+  { href: '/contact', label: 'Contact' },
+  { href: '/privacy', label: 'Privacy' },
+  { href: '/terms', label: 'Terms' },
 ] as const;
 
 /**
@@ -93,7 +111,7 @@ export const NAV = [
  * strip — a red "prices are 2 hours old" warning as the first thing a new
  * visitor sees. It is its own thing, so it gets its own key.
  */
-export type NavKey = (typeof NAV)[number]['key'] | 'home' | 'settings' | 'admin';
+export type NavKey = (typeof NAV)[number]['key'] | 'home' | 'settings' | 'admin' | 'about';
 
 /** The three things the landing page leads with. */
 export const FEATURES = [

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { eq, and, gte, asc, inArray } from 'drizzle-orm';
 import { db } from '@/database';
-import { osrsItems, osrsPrices, osrsPriceHistory, osrsItemWiki } from '@/database/schema';
+import { osrsItems, osrsPrices, osrsPriceHistory } from '@/database/schema';
 import {
   evaluate,
   formatGp,
@@ -12,8 +12,8 @@ import {
   minimumViableSpreadPercent,
 } from '@/lib/osrs/ge';
 import { buildPortfolio } from '@/lib/osrs/portfolio';
+import { itemBlurb } from '@/lib/osrs/item-blurb';
 import { limitStatus, formatResetIn } from '@/lib/osrs/limits';
-import { WIKI_LICENCE } from '@/lib/osrs/wiki';
 import { currentUser, cashStackFor } from '@/lib/session';
 import { tradesForItem } from '@/app/actions/trades';
 import { isWatching } from '@/app/actions/watchlist';
@@ -53,13 +53,9 @@ async function loadItem(id: number) {
       highTime: osrsPrices.highTime,
       hourlyVolume: osrsPrices.hourlyVolume,
       fetchedAt: osrsPrices.fetchedAt,
-      wikiSummary: osrsItemWiki.summary,
-      wikiTitle: osrsItemWiki.title,
-      wikiUrl: osrsItemWiki.url,
     })
     .from(osrsItems)
     .leftJoin(osrsPrices, eq(osrsPrices.itemId, osrsItems.id))
-    .leftJoin(osrsItemWiki, eq(osrsItemWiki.itemId, osrsItems.id))
     .where(eq(osrsItems.id, id))
     .limit(1);
   return row ?? null;
@@ -166,6 +162,17 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
      most items this is deeply negative, which is itself the useful answer —
      it is why the alch value acts as a price floor only on a few things. */
   const runePrice = natureRune[0]?.high ?? null;
+  const blurb = itemBlurb({
+    name: item.name,
+    members: item.members,
+    buyLimit: item.buyLimit,
+    highalch: item.highalch,
+    value: item.value,
+    low: item.low,
+    high: item.high,
+    hourlyVolume: item.hourlyVolume,
+    natureRune: runePrice,
+  });
   const alch =
     item.highalch && item.highalch > 0 && item.low !== null && runePrice !== null
       ? { proceeds: item.highalch - runePrice, margin: item.highalch - runePrice - item.low }
@@ -181,7 +188,9 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
           itemSchema({
             id: item.id,
             name: item.name,
-            description: item.wikiSummary ?? item.examine,
+            // Must match the visible text; marking up a description the
+            // page does not show is what gets structured data penalised.
+            description: blurb.join(' '),
             buyPrice: item.low,
             members: item.members,
           }),
@@ -223,29 +232,14 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
         <h2>About this item</h2>
         <div className="about-body">
           <div className="about-main">
-        {item.wikiSummary ? (
-          <>
-            <p className="about-text">{item.wikiSummary}</p>
-            {/* The attribution the licence requires. It travels with the text
-                it credits — see lib/osrs/wiki.ts before changing this. */}
-            <p className="about-credit">
-              From{' '}
-              <a href={item.wikiUrl ?? '#'} target="_blank" rel="noopener noreferrer nofollow">
-                {item.wikiTitle ?? item.name}
-              </a>{' '}
-              on the Old School RuneScape Wiki, used under{' '}
-              <a href={WIKI_LICENCE.url} target="_blank" rel="noopener noreferrer nofollow">
-                {WIKI_LICENCE.name}
-              </a>
-              .
-            </p>
-          </>
-        ) : (
-          <p className="subtle">
-            No description yet. These are fetched from the wiki a few at a time, heaviest-traded
-            first, so this fills in on its own.
+        {/* Written from the numbers rather than quoted from the wiki. The
+            wiki's prose is CC BY-NC-SA and the NC rules out reproducing it
+            on a page that carries ads — see lib/osrs/item-blurb.ts. */}
+        {blurb.map((line, i) => (
+          <p className="about-text" key={i}>
+            {line}
           </p>
-        )}
+        ))}
 
           </div>
 

@@ -35,7 +35,8 @@
     "test:progress": "tsx scripts/test-progress-stats.mts",
     "test:news": "tsx scripts/test-news-feed.mts",
     "test:memo": "tsx scripts/test-memo.mts",
-    "test:offers": "tsx scripts/test-offers.mts"
+    "test:offers": "tsx scripts/test-offers.mts",
+    "test:content": "tsx scripts/test-content.mts"
   },
   "dependencies": {
     "better-auth": "^1.7.1",

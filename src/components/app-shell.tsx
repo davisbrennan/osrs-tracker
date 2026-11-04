@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { appSettings } from '@/lib/app-settings';
-import { NAV, NAV_GROUPS, NAV_DIRECT, SITE, type NavKey } from '@/lib/site';
+import { NAV, NAV_GROUPS, NAV_DIRECT, SITE, FOOTER_LINKS, type NavKey } from '@/lib/site';
 import NavMenu from './nav-menu';
 import SignOut from './sign-out';
 import CashStack from './cash-stack';
@@ -244,6 +244,23 @@ export default async function AppShell({
       )}
 
       <div className="content">{children}</div>
+
+      {/* On every page. Previously these lived on the landing page alone,
+          so an item page — where most visitors actually arrive — offered no
+          route to the policies or to who runs the site. */}
+      <footer className="site-foot">
+        <nav aria-label="Site information">
+          {FOOTER_LINKS.map((l) => (
+            <Link key={l.href} href={l.href}>
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+        <p>
+          {SITE.name} is an independent fan project. Not affiliated with or endorsed by Jagex Ltd.
+          Prices from the OSRS Wiki.
+        </p>
+      </footer>
     </div>
   );
 }

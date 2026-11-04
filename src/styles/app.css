@@ -2453,3 +2453,141 @@ h2 .subtle {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* ============================================================
+   Guides, About, Contact — the written pages.
+
+   Narrower measure than the data pages, because these are read
+   rather than scanned. Everything else on the site is a table
+   that wants width; prose wants about 68 characters.
+   ============================================================ */
+
+.guide-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--s-3);
+  max-width: 72ch;
+}
+.guide-card {
+  display: block;
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  text-decoration: none;
+  /* Border only — no transform or shadow lift. A list of articles is not a
+     set of buttons, and the hover should read as "this is a link". */
+  transition: border-color 120ms ease;
+}
+.guide-card:hover {
+  border-color: var(--gold-dim);
+}
+.guide-card h2 {
+  margin: 0 0 var(--s-2);
+  font-size: 17px;
+  color: var(--gold);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.guide-card p {
+  margin: 0 0 var(--s-2);
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.guide-meta {
+  font-size: 12px;
+  /* --dim, not --faint: at 12px --faint measures 3.5:1 on the card and
+     fails AA. Metadata is still text people read. */
+  color: var(--dim);
+}
+
+.guide {
+  max-width: 68ch;
+}
+.guide h1 {
+  margin-bottom: var(--s-3);
+}
+.guide section {
+  margin-top: var(--s-6);
+}
+.guide h2 {
+  font-size: 19px;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+  margin: 0 0 var(--s-3);
+}
+.guide p {
+  /* Serif-free, so a touch under the 1.7 a serif would want. */
+  line-height: 1.65;
+  color: var(--text-2);
+  margin: 0 0 var(--s-3);
+}
+.guide strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.guide-more {
+  margin-top: var(--s-8);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--rule);
+  max-width: 72ch;
+}
+.guide-more h2 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+  margin: 0 0 var(--s-3);
+}
+.guide-more ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--s-2);
+}
+.guide-more li {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.contact-email {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  margin: 0 0 var(--s-6);
+}
+
+/* ---------------------------------------------------- site footer */
+
+.site-foot {
+  margin-top: var(--s-8);
+  padding: var(--s-5) 0 var(--s-6);
+  border-top: 1px solid var(--rule);
+}
+.site-foot nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  margin-bottom: var(--s-3);
+}
+.site-foot a {
+  font-size: 13px;
+  color: var(--text-2);
+  text-decoration: none;
+}
+.site-foot a:hover {
+  color: var(--gold);
+  text-decoration: underline;
+}
+.site-foot p {
+  margin: 0;
+  font-size: 12px;
+  /* Same reason as .guide-meta — --faint is 3.97:1 here. */
+  color: var(--dim);
+  max-width: 70ch;
+}

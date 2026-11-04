@@ -36,21 +36,25 @@ export default function Terms() {
         wrong or out of date. If a number here disagrees with the game, the game is right.
       </p>
 
-      <h2>Item descriptions come from the OSRS Wiki</h2>
+      <h2>Item descriptions are written here</h2>
       <p>
-        Where an item page carries a description, that text is taken from the Old School RuneScape
-        Wiki and is used under{' '}
+        The description on an item page is generated from the numbers this site already holds — the
+        buy limit, the alch values, how much trades in an hour, where the price sits. It is not
+        taken from anywhere else.
+      </p>
+      <p>
+        Earlier versions quoted the Old School RuneScape Wiki under{' '}
         <a href={WIKI_LICENCE.url} target="_blank" rel="noopener noreferrer nofollow">
           {WIKI_LICENCE.name}
         </a>
-        . Each description links to the article it came from, which is the attribution that licence
-        requires. The licence is a non-commercial one, which suits this site: it is a hobby project
-        and is not run for profit.
+        . That licence is a non-commercial one, and these pages now carry advertising, so the text
+        was removed rather than stretched to fit. Prices still come from the wiki&rsquo;s price API:
+        those are facts about trades rather than written work, and the wiki is credited for them
+        throughout.
       </p>
       <p>
         Everything else — prices, buy limits, examine text and hiscores — is game data from
-        Jagex&rsquo;s own endpoints and the wiki&rsquo;s price API, and is not covered by that
-        licence.
+        Jagex&rsquo;s own endpoints and the wiki&rsquo;s price API.
       </p>
 
       <h2>No affiliation with Jagex</h2>
