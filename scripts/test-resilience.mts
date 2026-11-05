@@ -130,6 +130,57 @@ console.log('\nA duplicate id in one batch is what 21000 looks like');
   await upsert(deduped);
 }
 
+console.log('\nThe daily rollup survives an item worth more than a cash stack');
+{
+  // This one only fails against a real Postgres. The columns were widened to
+  // bigint in 0011, but the rollup statement still cast the average to ::int
+  // — so the moment a 3rd age price reached the history table, the job threw
+  // 22003 on every run for two days while everything else looked fine.
+  //
+  // A unit test could not have caught it: the TypeScript is identical either
+  // way and the ceiling lives in a SQL cast.
+  const { rollupDaily } = await import('@/lib/osrs/jobs/rollup-daily');
+  const { osrsPriceHistory, osrsPriceDaily } = await import('@/database/schema');
+  const id = IDS[0];
+  const ts = new Date();
+  ts.setMinutes(0, 0, 0);
+
+  await db.delete(osrsPriceDaily).where(inArray(osrsPriceDaily.itemId, IDS));
+  await db.delete(osrsPriceHistory).where(inArray(osrsPriceHistory.itemId, IDS));
+  await db.insert(osrsPriceHistory).values({
+    itemId: id,
+    ts,
+    avgHigh: 8_778_000_000,
+    avgLow: 8_578_000_000,
+    highVolume: 1,
+    lowVolume: 1,
+  });
+
+  let threw: string | null = null;
+  try {
+    await rollupDaily(3);
+  } catch (e) {
+    threw = String((e as Error)?.message ?? e).slice(0, 80);
+  }
+  eq('the rollup does not throw', threw, null);
+
+  const bars = await db
+    .select({ high: osrsPriceDaily.avgHigh, low: osrsPriceDaily.avgLow })
+    .from(osrsPriceDaily)
+    .where(inArray(osrsPriceDaily.itemId, [id]));
+  eq('one daily bar was written', bars.length, 1);
+  eq('and the price survived the round trip intact', Number(bars[0]?.high), 8_778_000_000);
+  eq('both sides of it', Number(bars[0]?.low), 8_578_000_000);
+  ok(
+    'not truncated to the int4 ceiling',
+    Number(bars[0]?.high) !== 2_147_483_647,
+    String(bars[0]?.high)
+  );
+
+  await db.delete(osrsPriceDaily).where(inArray(osrsPriceDaily.itemId, IDS));
+  await db.delete(osrsPriceHistory).where(inArray(osrsPriceHistory.itemId, IDS));
+}
+
 await db.delete(osrsPrices).where(inArray(osrsPrices.itemId, IDS));
 await db.delete(osrsItems).where(inArray(osrsItems.id, IDS));
 

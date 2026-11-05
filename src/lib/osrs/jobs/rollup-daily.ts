@@ -28,8 +28,14 @@ export async function rollupDaily(days = REROLL_DAYS): Promise<JobResult> {
       -- principle, but the wiki's hourly volumes count trades rather than
       -- the quantity behind them, so weighting by it would not mean what it
       -- looks like it means.
-      ROUND(AVG(avg_high))::int,
-      ROUND(AVG(avg_low))::int,
+      -- ::bigint, not ::int. Migration 0011 widened these COLUMNS so that
+      -- items trading above a max cash stack could be stored, but an
+      -- explicit cast in the statement is its own ceiling: int4 here
+      -- truncated the value on the way in and the insert threw 22003 on
+      -- every run, silently, for two days. Widening a column is not
+      -- finished until the casts that feed it are widened too.
+      ROUND(AVG(avg_high))::bigint,
+      ROUND(AVG(avg_low))::bigint,
       COALESCE(SUM(high_volume), 0) + COALESCE(SUM(low_volume), 0)
     FROM osrs_price_history
     WHERE ts >= (now() - (${days} || ' days')::interval)
